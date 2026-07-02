@@ -1,6 +1,6 @@
 <template>
   <main class="app-shell">
-    <section v-if="!isFormPage" class="dashboard">
+    <section v-if="isDashboardPage" class="dashboard">
       <header class="dashboard__header">
         <div class="month-heading">
           <p class="eyebrow">Личный бюджет</p>
@@ -60,8 +60,11 @@
 
         <article class="panel">
           <div class="panel__header">
-            <h2>Последние операции</h2>
-            <span>{{ recentOperations.length }}</span>
+            <div>
+              <h2>Последние операции</h2>
+              <span>{{ recentOperations.length }}</span>
+            </div>
+            <button class="panel-link-button" type="button" @click="openOperationsPage">Все операции</button>
           </div>
 
           <p v-if="recentOperations.length === 0" class="empty-state">За этот месяц операций пока нет.</p>
@@ -73,6 +76,72 @@
                   <strong>{{ store.getCategoryName(operation.categoryID) }}</strong>
                   <span v-if="operation.subcategoryID">{{ store.getSubcategory(operation.subcategoryID)?.name }}</span>
                   <span>{{ formatDate(operation.date) }}</span>
+                </div>
+
+                <div class="operation-side">
+                  <b :class="operation.type === 0 ? 'amount--income' : 'amount--expense'">
+                    {{ operation.type === 0 ? '+' : '-' }}{{ formatMoney(operation.sum) }}
+                  </b>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </article>
+      </section>
+    </section>
+
+    <section v-else-if="isOperationsPage" class="operations-page">
+      <header class="operations-page__header">
+        <button class="back-button" type="button" @click="goHome(selectedMonthKey)">Назад</button>
+        <div>
+          <p class="eyebrow">Детальный просмотр</p>
+          <h1>Операции</h1>
+        </div>
+      </header>
+
+      <section class="operations-toolbar" aria-label="Фильтры операций">
+        <div class="operations-total" :class="operationsSummary.balance >= 0 ? 'operations-total--positive' : 'operations-total--negative'">
+          <span>{{ formatOperationsCount(sortedOperations.length) }}</span>
+          <strong>{{ formatMoney(operationsSummary.balance) }}</strong>
+        </div>
+
+        <fieldset class="period-switch">
+          <legend>Период</legend>
+          <button
+            v-for="option in periodOptions"
+            :key="option.value"
+            type="button"
+            :class="{ 'period-switch__button--active': operationsPeriod === option.value }"
+            @click="setOperationsPeriod(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </fieldset>
+      </section>
+
+      <p v-if="operationGroups.length === 0" class="empty-state">Операций пока нет.</p>
+
+      <section v-else class="operations-groups">
+        <article v-for="group in operationGroups" :key="group.key" class="operations-period">
+          <header class="operations-period__header">
+            <div>
+              <p>{{ group.subtitle }}</p>
+              <h2>{{ group.title }}</h2>
+            </div>
+
+            <div class="period-summary">
+              <span>Доход <b class="amount--income">{{ formatMoney(group.income) }}</b></span>
+              <span>Расход <b class="amount--expense">{{ formatMoney(group.expense) }}</b></span>
+            </div>
+          </header>
+
+          <ul v-if="operationsPeriod === 'day'" class="operation-list operation-list--detail">
+            <li v-for="operation in group.operations" :key="operation.id">
+              <div class="operation-main">
+                <div class="operation-text">
+                  <strong>{{ store.getCategoryName(operation.categoryID) }}</strong>
+                  <span v-if="operation.subcategoryID">{{ store.getSubcategory(operation.subcategoryID)?.name }}</span>
+                  <span>{{ formatOperationTime(operation.date) }}</span>
                 </div>
 
                 <div class="operation-side">
@@ -92,13 +161,92 @@
               </div>
             </li>
           </ul>
+
+          <div v-else class="category-breakdown">
+            <section v-for="category in group.categories" :key="category.key" class="category-breakdown__group">
+              <div class="category-breakdown__header">
+                <div class="breakdown-title">
+                  <button
+                    class="accordion-toggle"
+                    type="button"
+                    :class="{ 'accordion-toggle--open': isAccordionOpen(getCategoryAccordionKey(group.key, category.key)) }"
+                    :aria-label="`Показать ${category.name}`"
+                    @click="toggleAccordion(getCategoryAccordionKey(group.key, category.key))"
+                  >
+                    <span class="accordion-chevron">›</span>
+                  </button>
+
+                  <div>
+                    <strong>{{ category.name }}</strong>
+                    <span>{{ formatOperationsCount(category.count) }}</span>
+                  </div>
+                </div>
+
+                <div class="period-summary period-summary--compact">
+                  <span>Доход <b class="amount--income">{{ formatMoney(category.income) }}</b></span>
+                  <span>Расход <b class="amount--expense">{{ formatMoney(category.expense) }}</b></span>
+                </div>
+              </div>
+
+              <div v-if="isAccordionOpen(getCategoryAccordionKey(group.key, category.key))" class="subcategory-breakdown">
+                <article v-for="subcategory in category.subcategories" :key="subcategory.key" class="subcategory-breakdown__group">
+                  <div class="subcategory-breakdown__header">
+                    <div class="breakdown-title">
+                      <button
+                        class="accordion-toggle accordion-toggle--subtle"
+                        type="button"
+                        :class="{ 'accordion-toggle--open': isAccordionOpen(getSubcategoryAccordionKey(group.key, category.key, subcategory.key)) }"
+                        :aria-label="`Показать ${subcategory.name}`"
+                        @click="toggleAccordion(getSubcategoryAccordionKey(group.key, category.key, subcategory.key))"
+                      >
+                        <span class="accordion-chevron">›</span>
+                      </button>
+
+                      <div>
+                        <strong>{{ subcategory.name }}</strong>
+                        <span>{{ formatOperationsCount(subcategory.count) }}</span>
+                      </div>
+                    </div>
+
+                    <b :class="subcategory.balance >= 0 ? 'amount--income' : 'amount--expense'">{{ formatMoney(subcategory.balance) }}</b>
+                  </div>
+
+                  <ul v-if="isAccordionOpen(getSubcategoryAccordionKey(group.key, category.key, subcategory.key))" class="operation-list operation-list--compact">
+                    <li v-for="operation in subcategory.operations" :key="operation.id">
+                      <div class="operation-main">
+                        <div class="operation-text">
+                          <strong>{{ formatOperationDateTime(operation.date) }}</strong>
+                          <span v-if="operation.note">{{ operation.note }}</span>
+                        </div>
+
+                        <div class="operation-side">
+                          <b :class="operation.type === 0 ? 'amount--income' : 'amount--expense'">
+                            {{ operation.type === 0 ? '+' : '-' }}{{ formatMoney(operation.sum) }}
+                          </b>
+
+                          <div class="operation-actions">
+                            <button type="button" :aria-label="`Редактировать ${store.getCategoryName(operation.categoryID)}`" @click="openEditPage(operation)">
+                              Изм.
+                            </button>
+                            <button type="button" :aria-label="`Удалить ${store.getCategoryName(operation.categoryID)}`" @click="removeOperation(operation)">
+                              Удалить
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </article>
+              </div>
+            </section>
+          </div>
         </article>
       </section>
     </section>
 
     <section v-else class="add-page">
       <header class="add-page__header">
-        <button class="back-button" type="button" @click="goHome(selectedMonthKey)">Назад</button>
+        <button class="back-button" type="button" @click="goBackFromForm()">Назад</button>
         <div>
           <p class="eyebrow">{{ isEditPage ? 'Редактирование' : 'Новая операция' }}</p>
           <h1>{{ isEditPage ? 'Редактировать запись' : 'Добавить запись' }}</h1>
@@ -200,10 +348,46 @@ type CategoryGroup = {
   subcategories: CategoryOption[]
 }
 
+type OperationsPeriod = 'day' | 'week' | 'month' | 'year'
+
+type PeriodOption = {
+  value: OperationsPeriod
+  label: string
+}
+
+type OperationSummary = {
+  income: number
+  expense: number
+  balance: number
+  count: number
+}
+
+type OperationSubcategoryGroup = OperationSummary & {
+  key: string
+  name: string
+  operations: Operation[]
+}
+
+type OperationCategoryGroup = OperationSummary & {
+  key: string
+  name: string
+  subcategories: OperationSubcategoryGroup[]
+}
+
+type OperationPeriodGroup = OperationSummary & {
+  key: string
+  title: string
+  subtitle: string
+  operations: Operation[]
+  categories: OperationCategoryGroup[]
+}
+
 const store = useFinanceStore()
 const routePath = ref(normalizePath(window.location.pathname))
 const selectedMonthKey = ref(getMonthFromUrl() || store.currentMonthKey)
 const editingOperationId = ref(getOperationIdFromUrl())
+const operationsPeriod = ref<OperationsPeriod>(getOperationsPeriodFromUrl() || 'day')
+const openedAccordions = ref(new Set<string>())
 const formError = ref('')
 const form = ref({
   sum: null as number | null,
@@ -222,7 +406,7 @@ onMounted(async () => {
 
   syncRouteFromUrl()
 
-  if (!isFormPage.value) {
+  if (isDashboardPage.value) {
     syncMonthUrl(selectedMonthKey.value, 'replace')
   }
 
@@ -235,12 +419,21 @@ onBeforeUnmount(() => {
 
 const isAddPage = computed(() => routePath.value === '/add')
 const isEditPage = computed(() => routePath.value === '/edit')
+const isOperationsPage = computed(() => routePath.value === '/operations')
 const isFormPage = computed(() => isAddPage.value || isEditPage.value)
+const isDashboardPage = computed(() => routePath.value === '/')
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
 
 const currentMonth = computed(() => store.getMonthlySummary(selectedMonthKey.value))
 const previousMonth = computed(() => store.getMonthlySummary(previousMonthKey.value))
 const monthBalance = computed(() => currentMonth.value.balance)
+
+const periodOptions: PeriodOption[] = [
+  { value: 'day', label: 'День' },
+  { value: 'week', label: 'Неделя' },
+  { value: 'month', label: 'Месяц' },
+  { value: 'year', label: 'Год' },
+]
 
 const recentOperations = computed(() =>
   store.activeOperations
@@ -255,6 +448,37 @@ const previousMonthTitle = computed(() => formatMonthTitle(previousMonthKey.valu
 const editingOperation = computed(() =>
   editingOperationId.value ? store.operations.find(operation => operation.id === editingOperationId.value) : null,
 )
+
+const sortedOperations = computed(() =>
+  store.activeOperations
+    .filter(operation => isValidDate(new Date(operation.date)))
+    .slice()
+    .sort((first, second) => getOperationTimestamp(second) - getOperationTimestamp(first)),
+)
+
+const operationsSummary = computed(() => summarizeOperations(sortedOperations.value))
+
+const operationGroups = computed<OperationPeriodGroup[]>(() => {
+  const groups = new Map<string, OperationPeriodGroup>()
+
+  sortedOperations.value.forEach(operation => {
+    const date = new Date(operation.date)
+    const key = getOperationPeriodKey(date, operationsPeriod.value)
+    const existingGroup = groups.get(key)
+    const group = existingGroup || createOperationPeriodGroup(key, date, operationsPeriod.value)
+
+    applyOperationToSummary(group, operation)
+    group.operations.push(operation)
+    groups.set(key, group)
+  })
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      categories: operationsPeriod.value === 'day' ? [] : buildCategoryGroups(group.operations),
+    }))
+    .sort((first, second) => second.key.localeCompare(first.key))
+})
 
 const categoryGroups = computed<CategoryGroup[]>(() => {
   return store.categories
@@ -365,7 +589,7 @@ async function submitOperation() {
         subcategoryID: selectedCategory.value.subcategoryID,
       })
       resetForm()
-      goHome(getMonthKey(operationDate))
+      goBackFromForm(getMonthKey(operationDate))
       return
     }
 
@@ -385,7 +609,7 @@ async function submitOperation() {
     })
 
     resetForm()
-    goHome(getMonthKey(new Date(operation.date)))
+    goBackFromForm(getMonthKey(new Date(operation.date)))
   } catch {
     formError.value = 'Не удалось сохранить запись. Попробуйте еще раз.'
   }
@@ -393,7 +617,18 @@ async function submitOperation() {
 
 function openAddPage() {
   resetForm()
-  navigateTo('/add', { month: selectedMonthKey.value })
+  navigateTo('/add', {
+    month: selectedMonthKey.value,
+    from: isOperationsPage.value ? 'operations' : 'dashboard',
+    period: operationsPeriod.value,
+  })
+}
+
+function openOperationsPage() {
+  navigateTo('/operations', {
+    month: selectedMonthKey.value,
+    period: 'day',
+  })
 }
 
 function openEditPage(operation: Operation) {
@@ -401,6 +636,8 @@ function openEditPage(operation: Operation) {
   navigateTo('/edit', {
     id: operation.id,
     month: getMonthKey(new Date(operation.date)),
+    from: isOperationsPage.value ? 'operations' : 'dashboard',
+    period: operationsPeriod.value,
   })
 }
 
@@ -411,6 +648,55 @@ async function removeOperation(operation: Operation) {
 function goHome(month: string) {
   selectedMonthKey.value = month
   navigateTo('/', { month })
+}
+
+function goBackFromForm(month = selectedMonthKey.value) {
+  if (getReturnPageFromUrl() === 'operations') {
+    selectedMonthKey.value = month
+    navigateTo('/operations', {
+      month,
+      period: operationsPeriod.value,
+    })
+    return
+  }
+
+  goHome(month)
+}
+
+function setOperationsPeriod(period: OperationsPeriod) {
+  operationsPeriod.value = period
+  openedAccordions.value = new Set()
+
+  if (isOperationsPage.value) {
+    navigateTo('/operations', {
+      month: selectedMonthKey.value,
+      period,
+    })
+  }
+}
+
+function toggleAccordion(key: string) {
+  const nextOpenedAccordions = new Set(openedAccordions.value)
+
+  if (nextOpenedAccordions.has(key)) {
+    nextOpenedAccordions.delete(key)
+  } else {
+    nextOpenedAccordions.add(key)
+  }
+
+  openedAccordions.value = nextOpenedAccordions
+}
+
+function isAccordionOpen(key: string) {
+  return openedAccordions.value.has(key)
+}
+
+function getCategoryAccordionKey(periodKey: string, categoryKey: string) {
+  return `category:${periodKey}:${categoryKey}`
+}
+
+function getSubcategoryAccordionKey(periodKey: string, categoryKey: string, subcategoryKey: string) {
+  return `subcategory:${periodKey}:${categoryKey}:${subcategoryKey}`
 }
 
 function navigateTo(path: string, params: Record<string, string>) {
@@ -430,6 +716,13 @@ function syncRouteFromUrl() {
   routePath.value = normalizePath(window.location.pathname)
   selectedMonthKey.value = getMonthFromUrl() || store.currentMonthKey
   editingOperationId.value = getOperationIdFromUrl()
+  const nextOperationsPeriod = getOperationsPeriodFromUrl() || operationsPeriod.value
+
+  if (nextOperationsPeriod !== operationsPeriod.value) {
+    openedAccordions.value = new Set()
+  }
+
+  operationsPeriod.value = nextOperationsPeriod
 
   if (isEditPage.value && editingOperation.value) {
     fillFormFromOperation(editingOperation.value)
@@ -516,6 +809,22 @@ function formatDate(value: string) {
   }).format(new Date(value))
 }
 
+function formatOperationDateTime(value: string) {
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function formatOperationTime(value: string) {
+  return new Intl.DateTimeFormat('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 function formatMonthTitle(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number)
   const date = new Date(year || 0, (month || 1) - 1, 1)
@@ -533,6 +842,90 @@ function formatDateInput(date: Date) {
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function summarizeOperations(operations: Operation[]) {
+  const summary = createEmptySummary()
+
+  operations.forEach(operation => {
+    applyOperationToSummary(summary, operation)
+  })
+
+  return summary
+}
+
+function createEmptySummary(): OperationSummary {
+  return {
+    income: 0,
+    expense: 0,
+    balance: 0,
+    count: 0,
+  }
+}
+
+function applyOperationToSummary(summary: OperationSummary, operation: Operation) {
+  if (operation.type === 0) {
+    summary.income += operation.sum
+  } else if (operation.type === 1) {
+    summary.expense += operation.sum
+  }
+
+  summary.balance = summary.income - summary.expense
+  summary.count += 1
+}
+
+function createOperationPeriodGroup(key: string, date: Date, period: OperationsPeriod): OperationPeriodGroup {
+  return {
+    key,
+    title: formatOperationPeriodTitle(date, period),
+    subtitle: formatOperationPeriodSubtitle(date, period),
+    operations: [],
+    categories: [],
+    ...createEmptySummary(),
+  }
+}
+
+function buildCategoryGroups(operations: Operation[]) {
+  const categoryMap = new Map<string, OperationCategoryGroup>()
+
+  operations.forEach(operation => {
+    const categoryKey = operation.categoryID || 'without-category'
+    const subcategoryKey = operation.subcategoryID || `${categoryKey}:without-subcategory`
+    const category = categoryMap.get(categoryKey) || {
+      key: categoryKey,
+      name: store.getCategoryName(operation.categoryID),
+      subcategories: [],
+      ...createEmptySummary(),
+    }
+    const subcategory =
+      category.subcategories.find(item => item.key === subcategoryKey) || createSubcategoryGroup(subcategoryKey, operation)
+
+    applyOperationToSummary(category, operation)
+    applyOperationToSummary(subcategory, operation)
+    subcategory.operations.push(operation)
+
+    if (!category.subcategories.some(item => item.key === subcategory.key)) {
+      category.subcategories.push(subcategory)
+    }
+
+    categoryMap.set(categoryKey, category)
+  })
+
+  return Array.from(categoryMap.values())
+    .map(category => ({
+      ...category,
+      subcategories: category.subcategories.sort((first, second) => second.count - first.count),
+    }))
+    .sort((first, second) => second.count - first.count)
+}
+
+function createSubcategoryGroup(key: string, operation: Operation): OperationSubcategoryGroup {
+  return {
+    key,
+    name: operation.subcategoryID ? store.getSubcategory(operation.subcategoryID)?.name || 'Без подкатегории' : 'Без подкатегории',
+    operations: [],
+    ...createEmptySummary(),
+  }
 }
 
 function createOperationDate(value: string) {
@@ -559,6 +952,107 @@ function shiftMonthKey(monthKey: string, offset: number) {
   return getMonthKey(date)
 }
 
+function getYearKey(date: Date) {
+  return String(date.getFullYear())
+}
+
+function getDayKey(date: Date) {
+  return formatDateInput(date)
+}
+
+function getWeekKey(date: Date) {
+  return formatDateInput(getStartOfWeek(date))
+}
+
+function getOperationPeriodKey(date: Date, period: OperationsPeriod) {
+  if (period === 'year') {
+    return getYearKey(date)
+  }
+
+  if (period === 'month') {
+    return getMonthKey(date)
+  }
+
+  if (period === 'week') {
+    return getWeekKey(date)
+  }
+
+  return getDayKey(date)
+}
+
+function getStartOfWeek(date: Date) {
+  const start = new Date(date)
+  const day = start.getDay() || 7
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - day + 1)
+  return start
+}
+
+function getEndOfWeek(date: Date) {
+  const end = getStartOfWeek(date)
+  end.setDate(end.getDate() + 6)
+  return end
+}
+
+function formatOperationPeriodTitle(date: Date, period: OperationsPeriod) {
+  if (period === 'year') {
+    return new Intl.DateTimeFormat('ru-RU', { year: 'numeric' }).format(date)
+  }
+
+  if (period === 'month') {
+    return formatMonthTitle(getMonthKey(date))
+  }
+
+  if (period === 'week') {
+    const start = getStartOfWeek(date)
+    const end = getEndOfWeek(date)
+    return `${formatShortDate(start)} - ${formatShortDate(end)}`
+  }
+
+  return formatDayTitle(date)
+}
+
+function formatOperationPeriodSubtitle(date: Date, period: OperationsPeriod) {
+  if (period === 'day') {
+    return new Intl.DateTimeFormat('ru-RU', { weekday: 'long' }).format(date)
+  }
+
+  if (period === 'week') {
+    return 'Неделя'
+  }
+
+  if (period === 'month') {
+    return 'Месяц'
+  }
+
+  return 'Год'
+}
+
+function formatDayTitle(date: Date) {
+  const title = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+
+  return title.charAt(0).toUpperCase() + title.slice(1)
+}
+
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+  }).format(date)
+}
+
+function getOperationTimestamp(operation: Operation) {
+  return new Date(operation.date).getTime()
+}
+
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime())
+}
+
 function isValidMonthKey(value: string | null) {
   if (!value || !/^\d{4}-\d{2}$/.test(value)) {
     return false
@@ -577,8 +1071,21 @@ function getOperationIdFromUrl() {
   return new URLSearchParams(window.location.search).get('id')
 }
 
+function getReturnPageFromUrl() {
+  return new URLSearchParams(window.location.search).get('from')
+}
+
+function isOperationsPeriod(value: string | null): value is OperationsPeriod {
+  return value === 'day' || value === 'week' || value === 'month' || value === 'year'
+}
+
+function getOperationsPeriodFromUrl() {
+  const period = new URLSearchParams(window.location.search).get('period')
+  return isOperationsPeriod(period) ? period : null
+}
+
 function normalizePath(path: string) {
-  return path === '/add' || path === '/edit' ? path : '/'
+  return path === '/add' || path === '/edit' || path === '/operations' ? path : '/'
 }
 </script>
 
@@ -615,13 +1122,15 @@ button {
 }
 
 .dashboard,
-.add-page {
+.add-page,
+.operations-page {
   width: min(1120px, 100%);
   margin: 0 auto;
 }
 
 .dashboard__header,
-.add-page__header {
+.add-page__header,
+.operations-page__header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -629,7 +1138,8 @@ button {
   margin-bottom: 24px;
 }
 
-.add-page__header {
+.add-page__header,
+.operations-page__header {
   align-items: center;
   justify-content: flex-start;
 }
@@ -646,7 +1156,10 @@ button {
 
 .add-button,
 .back-button,
-.submit-button {
+.submit-button,
+.panel-link-button,
+.accordion-toggle,
+.period-switch button {
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
@@ -678,7 +1191,10 @@ button {
 
 .add-button:hover,
 .back-button:hover,
-.submit-button:hover {
+.submit-button:hover,
+.panel-link-button:hover,
+.accordion-toggle:hover,
+.period-switch button:hover {
   border-color: rgba(216, 199, 255, 0.55);
   background: rgba(132, 89, 255, 0.22);
   transform: translateY(-1px);
@@ -726,7 +1242,11 @@ h2 {
 .panel__header span,
 .comparison span,
 .operation-list span,
-.empty-state {
+.empty-state,
+.operations-total span,
+.operations-period__header p,
+.category-breakdown__header span,
+.subcategory-breakdown__header span {
   color: #bbaaca;
   font-size: 0.83rem;
 }
@@ -754,7 +1274,9 @@ h2 {
 
 .metric-card,
 .panel,
-.operation-form {
+.operation-form,
+.operations-toolbar,
+.operations-period {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -863,6 +1385,21 @@ h2 {
   margin-bottom: 18px;
 }
 
+.panel__header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.panel-link-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #d8c7ff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .comparison {
   display: grid;
   gap: 12px;
@@ -949,6 +1486,208 @@ h2 {
 .operation-actions button:hover {
   border-color: rgba(216, 199, 255, 0.52);
   background: rgba(132, 89, 255, 0.18);
+}
+
+.operations-toolbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.operations-total {
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.operations-total strong {
+  font-size: 1.65rem;
+}
+
+.operations-total--positive strong {
+  color: #8df3b5;
+}
+
+.operations-total--negative strong {
+  color: #ff8d97;
+}
+
+.period-switch {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.period-switch legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.period-switch button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #d8c7ff;
+  font-weight: 800;
+}
+
+.period-switch__button--active {
+  border-color: rgba(141, 243, 181, 0.68) !important;
+  color: #aef8c9 !important;
+  background: rgba(141, 243, 181, 0.12) !important;
+}
+
+.operations-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.operations-period {
+  padding: 22px;
+}
+
+.operations-period__header,
+.category-breakdown__header,
+.subcategory-breakdown__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.operations-period__header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.operations-period__header p {
+  margin-bottom: 6px;
+  text-transform: capitalize;
+}
+
+.operations-period__header h2 {
+  font-size: 1.2rem;
+}
+
+.period-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  text-align: right;
+}
+
+.period-summary span {
+  color: #bbaaca;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.period-summary b {
+  margin-left: 4px;
+}
+
+.period-summary--compact {
+  max-width: 360px;
+}
+
+.operation-list--detail li:first-child,
+.operation-list--compact li:first-child {
+  border-top: 0;
+}
+
+.category-breakdown {
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.category-breakdown__group {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.breakdown-title,
+.breakdown-title > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.breakdown-title {
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+}
+
+.accordion-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  color: #d8c7ff;
+}
+
+.accordion-toggle--subtle {
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.accordion-chevron {
+  display: inline-block;
+  font-size: 1.45rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.accordion-toggle--open .accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.category-breakdown__header strong,
+.subcategory-breakdown__header strong {
+  color: #fff;
+}
+
+.subcategory-breakdown {
+  display: grid;
+  gap: 10px;
+}
+
+.subcategory-breakdown__group {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.operation-list--compact li {
+  min-height: 48px;
+  padding: 10px 0;
+}
+
+.subcategory-breakdown__group .operation-list--compact {
+  padding-left: 38px;
+}
+
+.operation-list--compact .operation-text strong {
+  font-size: 0.9rem;
 }
 
 .empty-state {
@@ -1168,12 +1907,15 @@ h2 {
   }
 
   .dashboard__header,
+  .operations-page__header,
   .metrics,
-  .details-grid {
+  .details-grid,
+  .operations-toolbar {
     grid-template-columns: 1fr;
   }
 
-  .dashboard__header {
+  .dashboard__header,
+  .operations-toolbar {
     display: grid;
     align-items: start;
   }
@@ -1198,9 +1940,39 @@ h2 {
     margin-top: 38px;
   }
 
-  .add-page__header {
+  .add-page__header,
+  .operations-page__header {
     display: grid;
     justify-items: start;
+  }
+
+  .operations-total {
+    min-width: 0;
+  }
+
+  .period-switch {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .operations-period {
+    padding: 18px;
+  }
+
+  .operations-period__header,
+  .category-breakdown__header,
+  .subcategory-breakdown__header {
+    display: grid;
+    justify-items: start;
+  }
+
+  .period-summary {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .category-breakdown__group {
+    padding: 14px;
   }
 
   .operation-form {
