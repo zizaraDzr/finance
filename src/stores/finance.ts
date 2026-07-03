@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Account, Category, Operation, Subcategory, Target } from '@/types'
 import { readFinanceData, writeFinanceData, type FinanceData } from '@/storage/financeDb'
+import { getMonthKey, shiftMonthKey } from '@/utils/date'
 
 export type { Account, Category, Operation, Subcategory, Target }
 
@@ -14,16 +15,6 @@ export type MonthlySummary = {
 }
 
 export type NewOperation = Omit<Operation, 'id' | 'isDeleted'>
-
-function getMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function shiftMonthKey(monthKey: string, offset: number) {
-  const [year, month] = monthKey.split('-').map(Number)
-  const date = new Date(year || 0, (month || 1) - 1 + offset, 1)
-  return getMonthKey(date)
-}
 
 function emptyMonthSummary(month: string): MonthlySummary {
   return {

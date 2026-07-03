@@ -8,8 +8,8 @@ export interface Account {
   position: number
   currencySymbol: string
   currencyCode: string
-  balanceAdjustmentData: any
-  homeWidgetsData: any
+  balanceAdjustmentData: unknown
+  homeWidgetsData: unknown
 }
 
 export interface Category {
@@ -64,4 +64,53 @@ export interface Target {
   accountID: string
   isFinished: boolean
   finishDay: string | null
+}
+
+export type OperationsPeriod = 'day' | 'week' | 'month' | 'year'
+
+export interface PeriodOption {
+  value: OperationsPeriod
+  label: string
+}
+
+export interface OperationSummary {
+  income: number
+  expense: number
+  balance: number
+  count: number
+}
+
+export interface OperationSubcategoryGroup extends OperationSummary {
+  key: string
+  name: string
+  operations: Operation[]
+}
+
+export interface OperationCategoryGroup extends OperationSummary {
+  key: string
+  name: string
+  subcategories: OperationSubcategoryGroup[]
+}
+
+export interface OperationPeriodGroup extends OperationSummary {
+  key: string
+  title: string
+  subtitle: string
+  operations: Operation[]
+  categories: OperationCategoryGroup[]
+}
+
+export interface CategoryOption {
+  value: string
+  label: string
+  name: string
+  categoryID: string
+  subcategoryID: string | null
+}
+
+export interface CategoryPickerGroup {
+  id: string
+  name: string
+  option: CategoryOption
+  subcategories: CategoryOption[]
 }
