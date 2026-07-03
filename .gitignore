@@ -12,7 +12,6 @@ node_modules
 dist
 dist-ssr
 coverage
-default.json
 *.local
 
 # Editor directories and files
@@ -38,5 +37,4 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
-default.json
 default.json
