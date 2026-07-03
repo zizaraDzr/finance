@@ -135,7 +135,7 @@ async function submitOperation() {
     goBack(getMonthKey(new Date(operation.date)))
   } catch (err) {
     // formError.value = 'Не удалось сохранить запись. Попробуйте еще раз.'
-    formError.value = `${err}`
+    formError.value = `${err }`
   }
 }
 
