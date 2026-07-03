@@ -122,3 +122,15 @@ function formatShortDate(date: Date) {
 function capitalizeFirstLetter(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
+
+export function generateGuid() {
+  let d = new Date().getTime()
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    d += performance.now()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replaceAll(/[xy]/g, function (c) {
+    const r = Math.trunc((d + Math.random() * 16) % 16)
+    d = Math.floor(d / 16)
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16).toUpperCase()
+  })
+}

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import type { Account, Category, Operation, Subcategory, Target } from '@/types'
 import { readFinanceData, writeFinanceData, type FinanceData } from '@/storage/financeDb'
 import { getMonthKey, shiftMonthKey } from '@/utils/date'
+import { generateGuid } from '@/utils/formatters'
 
 export type { Account, Category, Operation, Subcategory, Target }
 
@@ -141,7 +142,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function addOperation(operation: NewOperation) {
     const newOperation: Operation = {
       ...operation,
-      id: crypto.randomUUID(),
+      id: generateGuid(),
       isDeleted: false,
     }
 
