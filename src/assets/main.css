@@ -67,6 +67,7 @@ button {
 .submit-button,
 .panel-link-button,
 .accordion-toggle,
+.load-more-button,
 .period-switch button {
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
@@ -102,6 +103,7 @@ button {
 .submit-button:hover,
 .panel-link-button:hover,
 .accordion-toggle:hover,
+.load-more-button:hover,
 .period-switch button:hover {
   border-color: rgba(216, 199, 255, 0.55);
   background: rgba(132, 89, 255, 0.22);
@@ -457,6 +459,20 @@ h2 {
 .operations-groups {
   display: grid;
   gap: 18px;
+}
+
+.load-more-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  color: #d8c7ff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.load-more-button--inline {
+  width: 100%;
+  margin-top: 16px;
 }
 
 .operations-period {

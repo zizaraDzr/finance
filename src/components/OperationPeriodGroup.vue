@@ -12,20 +12,31 @@
       </div>
     </header>
 
-    <ul v-if="period === 'day'" class="operation-list operation-list--detail">
-      <OperationListItem
-        v-for="operation in group.operations"
-        :key="operation.id"
-        :operation="operation"
-        :title="getCategoryName(operation.categoryID)"
-        :subtitle="operation.subcategoryID ? getSubcategory(operation.subcategoryID)?.name : undefined"
-        :time-label="formatOperationTime(operation.date)"
-        :amount-label="formatMoney(operation.sum, currencySymbol)"
-        show-actions
-        @edit="$emit('edit', operation)"
-        @remove="$emit('remove', operation)"
-      />
-    </ul>
+    <template v-if="period === 'day'">
+      <ul class="operation-list operation-list--detail">
+        <OperationListItem
+          v-for="operation in visibleDayOperations"
+          :key="operation.id"
+          :operation="operation"
+          :title="getCategoryName(operation.categoryID)"
+          :subtitle="operation.subcategoryID ? getSubcategory(operation.subcategoryID)?.name : undefined"
+          :time-label="formatOperationTime(operation.date)"
+          :amount-label="formatMoney(operation.sum, currencySymbol)"
+          show-actions
+          @edit="$emit('edit', operation)"
+          @remove="$emit('remove', operation)"
+        />
+      </ul>
+
+      <button
+        v-if="hiddenDayOperationsCount > 0"
+        class="load-more-button load-more-button--inline"
+        type="button"
+        @click="showMoreDayOperations"
+      >
+        Показать ещё {{ nextDayOperationsCount }} из {{ hiddenDayOperationsCount }}
+      </button>
+    </template>
 
     <div v-else class="category-breakdown">
       <section v-for="category in group.categories" :key="category.key" class="category-breakdown__group">
@@ -100,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import OperationListItem from '@/components/OperationListItem.vue'
 import type { Operation, OperationPeriodGroup, OperationsPeriod, Subcategory } from '@/types'
 import { formatMoney, formatOperationDateTime, formatOperationTime, formatOperationsCount } from '@/utils/formatters'
@@ -119,6 +130,26 @@ defineEmits<{
 }>()
 
 const openedAccordions = ref(new Set<string>())
+const dayOperationsPageSize = 40
+const visibleDayOperationsCount = ref(dayOperationsPageSize)
+const visibleDayOperations = computed(() => props.group.operations.slice(0, visibleDayOperationsCount.value))
+const hiddenDayOperationsCount = computed(() =>
+  Math.max(props.group.operations.length - visibleDayOperations.value.length, 0),
+)
+const nextDayOperationsCount = computed(() =>
+  Math.min(dayOperationsPageSize, hiddenDayOperationsCount.value),
+)
+
+watch(
+  () => props.group.key,
+  () => {
+    visibleDayOperationsCount.value = dayOperationsPageSize
+  },
+)
+
+function showMoreDayOperations() {
+  visibleDayOperationsCount.value += dayOperationsPageSize
+}
 
 function toggleAccordion(key: string) {
   const nextOpenedAccordions = new Set(openedAccordions.value)

@@ -20,7 +20,7 @@
 
     <section v-else class="operations-groups">
       <OperationPeriodGroup
-        v-for="group in operationGroups"
+        v-for="group in visibleOperationGroups"
         :key="group.key"
         :currency-symbol="store.currencySymbol"
         :get-category-name="store.getCategoryName"
@@ -30,12 +30,21 @@
         @edit="openEditPage"
         @remove="removeOperation"
       />
+
+      <button
+        v-if="hiddenOperationGroupsCount > 0"
+        class="load-more-button"
+        type="button"
+        @click="showMoreOperationGroups"
+      >
+        Показать ещё {{ nextOperationGroupsCount }} из {{ hiddenOperationGroupsCount }}
+      </button>
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OperationPeriodGroup from '@/components/OperationPeriodGroup.vue'
 import PeriodSwitch from '@/components/PeriodSwitch.vue'
@@ -47,6 +56,13 @@ import { buildOperationPeriodGroups, sortOperationsByDateDesc, summarizeOperatio
 const store = useFinanceStore()
 const route = useRoute()
 const router = useRouter()
+const operationGroupPageSizes: Record<OperationsPeriod, number> = {
+  day: 14,
+  week: 12,
+  month: 12,
+  year: 12,
+}
+const visibleOperationGroupsCount = ref(operationGroupPageSizes.day)
 
 const selectedMonthKey = computed(() => {
   const month = typeof route.query.month === 'string' ? route.query.month : null
@@ -63,6 +79,22 @@ const operationGroups = computed(() =>
     getCategoryName: store.getCategoryName,
     getSubcategory: store.getSubcategory,
   }),
+)
+const operationGroupsPageSize = computed(() => operationGroupPageSizes[operationsPeriod.value])
+const visibleOperationGroups = computed(() => operationGroups.value.slice(0, visibleOperationGroupsCount.value))
+const hiddenOperationGroupsCount = computed(() =>
+  Math.max(operationGroups.value.length - visibleOperationGroups.value.length, 0),
+)
+const nextOperationGroupsCount = computed(() =>
+  Math.min(operationGroupsPageSize.value, hiddenOperationGroupsCount.value),
+)
+
+watch(
+  [operationsPeriod, selectedMonthKey],
+  ([period]) => {
+    visibleOperationGroupsCount.value = operationGroupPageSizes[period]
+  },
+  { immediate: true },
 )
 
 function goHome() {
@@ -82,6 +114,10 @@ function setOperationsPeriod(period: OperationsPeriod) {
       period,
     },
   })
+}
+
+function showMoreOperationGroups() {
+  visibleOperationGroupsCount.value += operationGroupsPageSize.value
 }
 
 function openEditPage(operation: Operation) {
