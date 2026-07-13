@@ -28,14 +28,18 @@
         <p>{{ formatOperationsCount(currentMonth.count) }} за месяц</p>
       </article>
 
-      <article class="metric-card metric-card--expense">
+      <button
+        class="metric-card metric-card--expense metric-card--button"
+        type="button"
+        @click="openExpenseAnalyticsPage"
+      >
         <div class="metric-card__topline">
           <span>Расход</span>
           <span class="metric-card__marker"></span>
         </div>
         <strong>{{ formatMoney(currentMonth.expense, store.currencySymbol) }}</strong>
         <p class="expense-trend" :class="expenseTrendClass">{{ expenseTrendText }}</p>
-      </article>
+      </button>
     </section>
 
     <section class="details-grid">
@@ -137,6 +141,16 @@ function openOperationsPage() {
     query: {
       month: selectedMonthKey.value,
       period: 'day',
+    },
+  })
+}
+
+function openExpenseAnalyticsPage() {
+  router.push({
+    name: 'expense-analytics',
+    query: {
+      month: selectedMonthKey.value,
+      expensePeriod: 'month',
     },
   })
 }
