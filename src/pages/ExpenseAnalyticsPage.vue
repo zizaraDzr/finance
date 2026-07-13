@@ -7,7 +7,7 @@
         <button
           class="month-nav-button"
           type="button"
-          aria-label="Предыдущий месяц"
+          :aria-label="previousPeriodLabel"
           @click="selectPreviousMonth"
         >
           ‹
@@ -15,14 +15,14 @@
 
         <div>
           <p class="eyebrow">Аналитика расходов</p>
-          <h1>{{ selectedMonthTitle }}</h1>
+          <h1>{{ selectedPeriodTitle }}</h1>
         </div>
 
         <button
-          v-if="hasNextMonth"
+          v-if="hasNextPeriod"
           class="month-nav-button"
           type="button"
-          aria-label="Следующий месяц"
+          :aria-label="nextPeriodLabel"
           @click="selectNextMonth"
         >
           ›
@@ -175,6 +175,8 @@
             </g>
           </svg>
         </div>
+
+        <p class="trend-description">{{ trendDescription }}</p>
       </article>
     </section>
   </section>
@@ -234,14 +236,47 @@ const selectedMonthKey = computed(() => {
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
 const nextMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, 1))
 const selectedYear = computed(() => Number(selectedMonthKey.value.slice(0, 4)))
+const selectedMonthNumber = computed(() => Number(selectedMonthKey.value.slice(5, 7)))
+const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
+const currentMonthNumber = computed(() => Number(store.currentMonthKey.slice(5, 7)))
 const selectedMonthTitle = computed(() => formatMonthTitle(selectedMonthKey.value))
-const hasNextMonth = computed(() => nextMonthKey.value <= store.currentMonthKey)
 const analyticsPeriod = computed<ExpenseAnalyticsPeriod>(() => {
   const period = typeof route.query.expensePeriod === 'string' ? route.query.expensePeriod : null
   return period === 'year' ? 'year' : 'month'
 })
+const selectedPeriodTitle = computed(() =>
+  analyticsPeriod.value === 'year' ? String(selectedYear.value) : selectedMonthTitle.value,
+)
+const previousPeriodKey = computed(() =>
+  analyticsPeriod.value === 'year'
+    ? createMonthKey(selectedYear.value - 1, selectedMonthNumber.value)
+    : previousMonthKey.value,
+)
+const nextPeriodKey = computed(() => {
+  if (analyticsPeriod.value === 'month') {
+    return nextMonthKey.value
+  }
+
+  const nextYear = selectedYear.value + 1
+  const nextMonth = nextYear === currentYear.value
+    ? Math.min(selectedMonthNumber.value, currentMonthNumber.value)
+    : selectedMonthNumber.value
+
+  return createMonthKey(nextYear, nextMonth)
+})
+const hasNextPeriod = computed(() =>
+  analyticsPeriod.value === 'year'
+    ? selectedYear.value < currentYear.value
+    : nextMonthKey.value <= store.currentMonthKey,
+)
 const analyticsPeriodLabel = computed(() =>
   analyticsPeriod.value === 'month' ? 'Расход за месяц' : 'Расход за год',
+)
+const previousPeriodLabel = computed(() =>
+  analyticsPeriod.value === 'year' ? 'Предыдущий год' : 'Предыдущий месяц',
+)
+const nextPeriodLabel = computed(() =>
+  analyticsPeriod.value === 'year' ? 'Следующий год' : 'Следующий месяц',
 )
 
 const expenseOperations = computed(() =>
@@ -289,8 +324,51 @@ const trendMaxValue = computed(() =>
     1,
   ),
 )
-const currentTrendPoints = computed(() => getTrendPoints(trendData.value.current))
+const currentTrendDataLength = computed(() => getCurrentTrendDataLength(trendData.value.current.length))
+const visibleCurrentTrendData = computed(() =>
+  trendData.value.current.slice(0, currentTrendDataLength.value),
+)
+const currentTrendPoints = computed(() => getTrendPoints(visibleCurrentTrendData.value, trendData.value.current.length))
 const previousTrendPoints = computed(() => getTrendPoints(trendData.value.previous))
+const trendComparison = computed(() => {
+  const index = currentTrendDataLength.value - 1
+  const currentValue = index >= 0 ? trendData.value.current[index]?.value || 0 : 0
+  const previousValue = index >= 0 ? trendData.value.previous[index]?.value || 0 : 0
+
+  return {
+    currentValue,
+    difference: currentValue - previousValue,
+    previousValue,
+  }
+})
+const trendDescription = computed(() => {
+  const { currentValue, difference, previousValue } = trendComparison.value
+  const periodPointLabel = analyticsPeriod.value === 'year' ? 'к этому месяцу' : 'к этому дню'
+
+  if (currentTrendDataLength.value === 0) {
+    return 'За выбранный период пока нет данных для сравнения.'
+  }
+
+  if (previousValue === 0) {
+    if (currentValue === 0) {
+      return `Вы потратили ${periodPointLabel} столько же, сколько в прошлом периоде.`
+    }
+
+    return `Вы потратили ${periodPointLabel} на ${formatMoney(currentValue, store.currencySymbol)} больше, чем в прошлом периоде.`
+  }
+
+  const percentDifference = Math.abs((difference / previousValue) * 100)
+
+  if (difference > 0) {
+    return `Вы потратили ${periodPointLabel} на ${formatPercent(percentDifference)} больше, чем в прошлом периоде.`
+  }
+
+  if (difference < 0) {
+    return `Вы потратили ${periodPointLabel} на ${formatPercent(percentDifference)} меньше, чем в прошлом периоде.`
+  }
+
+  return `Вы потратили ${periodPointLabel} столько же, сколько в прошлом периоде.`
+})
 const chartLabels = computed(() =>
   trendData.value.current.map((point, index, points) => ({
     key: `${point.label}:${index}`,
@@ -327,11 +405,11 @@ function goHome() {
 }
 
 function selectPreviousMonth() {
-  setSelectedMonth(previousMonthKey.value)
+  setSelectedMonth(previousPeriodKey.value)
 }
 
 function selectNextMonth() {
-  setSelectedMonth(nextMonthKey.value)
+  setSelectedMonth(nextPeriodKey.value)
 }
 
 function setSelectedMonth(month: string) {
@@ -372,6 +450,10 @@ function isCategoryOpen(key: string) {
 
 function showAllExpenseGroups() {
   isAllExpenseGroupsVisible.value = true
+}
+
+function createMonthKey(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`
 }
 
 function buildExpenseGroups(operations: Operation[], total: number) {
@@ -496,9 +578,27 @@ function getDaysInMonth(month: string) {
   return new Date(year || 0, monthIndex || 1, 0).getDate()
 }
 
-function getTrendPoints(points: TrendPoint[]) {
+function getCurrentTrendDataLength(totalLength: number) {
+  const today = new Date()
+
+  if (analyticsPeriod.value === 'year') {
+    if (selectedYear.value > currentYear.value) {
+      return 0
+    }
+
+    return selectedYear.value === currentYear.value ? today.getMonth() + 1 : totalLength
+  }
+
+  if (selectedMonthKey.value > store.currentMonthKey) {
+    return 0
+  }
+
+  return selectedMonthKey.value === store.currentMonthKey ? today.getDate() : totalLength
+}
+
+function getTrendPoints(points: TrendPoint[], totalLength = points.length) {
   return points
-    .map((point, index) => `${getChartX(index, points.length)},${getChartY(point.value)}`)
+    .map((point, index) => `${getChartX(index, totalLength)},${getChartY(point.value)}`)
     .join(' ')
 }
 
