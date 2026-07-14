@@ -8,10 +8,19 @@ export type FinanceData = {
   Target?: Target[]
 }
 
+export type FinanceSnapshot = {
+  data: FinanceData
+  updatedAt: string
+}
+
 const DB_NAME = 'budget-db'
 const DB_VERSION = 1
 const STORE_NAME = 'finance-data'
 const DATA_KEY = 'current'
+
+function isFinanceSnapshot(value: FinanceData | FinanceSnapshot | undefined): value is FinanceSnapshot {
+  return Boolean(value && 'data' in value && 'updatedAt' in value)
+}
 
 function openFinanceDb() {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -66,10 +75,35 @@ function runStoreRequest<T>(mode: IDBTransactionMode, handler: (store: IDBObject
   })
 }
 
-export function readFinanceData() {
-  return runStoreRequest<FinanceData | undefined>('readonly', store => store.get(DATA_KEY))
+export async function readFinanceSnapshot() {
+  const stored = await runStoreRequest<FinanceData | FinanceSnapshot | undefined>('readonly', store => store.get(DATA_KEY))
+
+  if (!stored) {
+    return undefined
+  }
+
+  if (isFinanceSnapshot(stored)) {
+    return stored
+  }
+
+  return {
+    data: stored,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+export async function readFinanceData() {
+  const snapshot = await readFinanceSnapshot()
+  return snapshot?.data
+}
+
+export function writeFinanceSnapshot(snapshot: FinanceSnapshot) {
+  return runStoreRequest<IDBValidKey>('readwrite', store => store.put(snapshot, DATA_KEY))
 }
 
 export function writeFinanceData(data: FinanceData) {
-  return runStoreRequest<IDBValidKey>('readwrite', store => store.put(data, DATA_KEY))
+  return writeFinanceSnapshot({
+    data,
+    updatedAt: new Date().toISOString(),
+  })
 }

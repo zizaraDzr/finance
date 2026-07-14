@@ -67,6 +67,7 @@ button {
 
 .add-button,
 .back-button,
+.sync-button,
 .submit-button,
 .panel-link-button,
 .accordion-toggle,
@@ -102,8 +103,32 @@ button {
   border-radius: 999px;
 }
 
+.sync-button {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  min-width: 170px;
+  min-height: 78px;
+  padding: 0 16px;
+  border-radius: 8px;
+  color: #d8c7ff;
+  font-weight: 800;
+}
+
+.sync-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.sync-button small {
+  color: #bbaaca;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .add-button:hover,
 .back-button:hover,
+.sync-button:hover,
 .submit-button:hover,
 .panel-link-button:hover,
 .accordion-toggle:hover,
@@ -1074,6 +1099,12 @@ h2 {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr);
     width: 100%;
+  }
+
+  .sync-button {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 48px;
   }
 
   .balance-pill {

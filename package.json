@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "pinia": "^3.0.4",
+    "vite-plugin-pwa": "^1.3.0",
     "vue": "^3.5.38",
     "vue-router": "^5.1.0"
   },

@@ -1,7 +1,12 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Account, Category, Operation, Subcategory, Target } from '@/types'
-import { readFinanceData, writeFinanceData, type FinanceData } from '@/storage/financeDb'
+import {
+  readFinanceSnapshot,
+  writeFinanceSnapshot,
+  type FinanceData,
+  type FinanceSnapshot,
+} from '@/storage/financeDb'
 import { getMonthKey, shiftMonthKey } from '@/utils/date'
 import { generateGuid } from '@/utils/formatters'
 
@@ -37,6 +42,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const operations = ref<Operation[]>([])
   const subcategories = ref<Subcategory[]>([])
   const targets = ref<Target[]>([])
+  const lastUpdatedAt = ref(new Date(0).toISOString())
 
   function loadData(data: FinanceData) {
     accounts.value = data.Account || []
@@ -58,15 +64,31 @@ export const useFinanceStore = defineStore('finance', () => {
     return JSON.parse(JSON.stringify(data)) as FinanceData
   }
 
-  async function saveToIndexedDB() {
-    await writeFinanceData(exportData())
+  function exportSnapshot(): FinanceSnapshot {
+    return {
+      data: exportData(),
+      updatedAt: lastUpdatedAt.value,
+    }
+  }
+
+  async function saveToIndexedDB(updatedAt = new Date().toISOString()) {
+    lastUpdatedAt.value = updatedAt
+    await writeFinanceSnapshot(exportSnapshot())
+  }
+
+  async function saveSnapshotToIndexedDB(snapshot: FinanceSnapshot) {
+    loadData(snapshot.data)
+    lastUpdatedAt.value = snapshot.updatedAt
+    await writeFinanceSnapshot(snapshot)
   }
 
   async function loadFromIndexedDB() {
-    const indexedData = await readFinanceData()
+    const indexedSnapshot = await readFinanceSnapshot()
 
-    if (indexedData) {
-      loadData(indexedData)
+    if (indexedSnapshot) {
+      loadData(indexedSnapshot.data)
+      lastUpdatedAt.value = indexedSnapshot.updatedAt
+      await writeFinanceSnapshot(indexedSnapshot)
       return true
     }
 
@@ -212,6 +234,7 @@ export const useFinanceStore = defineStore('finance', () => {
     operations,
     subcategories,
     targets,
+    lastUpdatedAt,
     activeOperations,
     incomes,
     expenses,
@@ -225,8 +248,10 @@ export const useFinanceStore = defineStore('finance', () => {
     previousMonthSummary,
     currencySymbol,
     getMonthlySummary,
+    exportSnapshot,
     loadData,
     saveToIndexedDB,
+    saveSnapshotToIndexedDB,
     loadFromIndexedDB,
     addOperation,
     updateOperation,
