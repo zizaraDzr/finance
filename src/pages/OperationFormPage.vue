@@ -65,7 +65,9 @@ const editingOperationId = computed(() => (typeof route.params.id === 'string' ?
 const editingOperation = computed(() =>
   editingOperationId.value ? store.operations.find(operation => operation.id === editingOperationId.value) : null,
 )
-const categoryGroups = computed(() => buildCategoryPickerGroups(store.categories, store.subcategories, form.value.type))
+const categoryGroups = computed(() =>
+  buildCategoryPickerGroups(store.categories, store.subcategories, form.value.type, store.activeOperations),
+)
 const categoryOptions = computed(() =>
   categoryGroups.value.flatMap(group => (group.subcategories.length ? group.subcategories : [group.option])),
 )
