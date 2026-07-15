@@ -20,9 +20,13 @@ type SyncResult =
 const syncEndpoint = '/api/finance-data'
 
 export async function fetchServerFinanceSnapshot() {
-  const response = await fetch(syncEndpoint, {
-    headers: getSyncHeaders(),
-  })
+  const headers: HeadersInit = {}
+  const syncToken = getSyncHeaders().Authorization
+
+  if (syncToken) {
+    headers.Authorization = syncToken
+  }
+  const response = await fetch(syncEndpoint, { headers })
 
   if (!response.ok) {
     throw new Error('Не удалось получить данные с сервера.')
@@ -69,10 +73,16 @@ export async function syncFinanceData(store: FinanceStore): Promise<SyncResult> 
 }
 
 async function uploadFinanceSnapshot(snapshot: FinanceSnapshot) {
+  const headers: HeadersInit = {}
+  const syncToken = getSyncHeaders().Authorization
+
+  if (syncToken) {
+    headers.Authorization = syncToken
+  }
   const response = await fetch(syncEndpoint, {
     method: 'PUT',
     headers: {
-      ...getSyncHeaders(),
+      ...headers,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(snapshot),
