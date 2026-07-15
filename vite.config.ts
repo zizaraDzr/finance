@@ -11,13 +11,13 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       manifest: {
         name: 'Личный бюджет',
         short_name: 'Бюджет',
         description: 'Оффлайн-приложение для учета личного бюджета.',
         theme_color: '#160f23',
-        background_color: '#160f23',
+        background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [

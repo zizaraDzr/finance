@@ -7,14 +7,17 @@
       </div>
 
       <div class="header-actions">
+        <!-- <button class="add-button" type="button" aria-label="Добавить запись" @click="clearDB">
+          -
+        </button> -->
         <button class="add-button" type="button" aria-label="Добавить запись" @click="openAddPage">
           +
         </button>
 
-        <button class="sync-button" type="button" :disabled="isSyncing" @click="syncData">
+        <!-- <button class="sync-button" type="button" :disabled="isSyncing" @click="syncData">
           <span>{{ isSyncing ? 'Синхронизация' : 'Синхронизировать' }}</span>
           <small v-if="syncMessage">{{ syncMessage }}</small>
-        </button>
+        </button> -->
 
         <div class="balance-pill" :class="monthBalance >= 0 ? 'balance-pill--positive' : 'balance-pill--negative'">
           <span>Баланс месяца</span>
@@ -94,10 +97,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { useRegisterSW } from 'virtual:pwa-register/vue'
+
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OperationListItem from '@/components/OperationListItem.vue'
-import { syncFinanceData } from '@/services/financeSync'
+// import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
 import { getMonthKey, isValidMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatDate, formatMoney, formatMonthTitle, formatOperationsCount } from '@/utils/formatters'
@@ -106,8 +111,14 @@ import { getExpenseTrend } from '@/utils/monthly'
 const store = useFinanceStore()
 const route = useRoute()
 const router = useRouter()
-const isSyncing = ref(false)
-const syncMessage = ref('')
+// const isSyncing = ref(false)
+// const syncMessage = ref('')
+const { needRefresh, updateServiceWorker } = useRegisterSW()
+watch(needRefresh, (newValue) => {
+  if (newValue && confirm('Доступна новая версия. Обновить?')) {
+    updateServiceWorker(true)
+  }
+})
 
 const selectedMonthKey = computed(() => {
   const month = typeof route.query.month === 'string' ? route.query.month : null
@@ -162,25 +173,36 @@ function openExpenseAnalyticsPage() {
     },
   })
 }
+// const clearDB = () => {
+//   if (confirm('Удалить всю базу данных?')) {
+//     const DB_NAME = import.meta.env.VITE_DB_NAME;
+//     const request = indexedDB.deleteDatabase(DB_NAME);
+//     request.onsuccess = () => {
+//       alert(`База данных очищена ${DB_NAME} Страница будет перезагружена.`);
+//       // location.reload();
+//     };
+//     request.onerror = () => alert('Ошибка при очистке');
+//   }
+// }
 
-async function syncData() {
-  isSyncing.value = true
-  syncMessage.value = ''
+// async function syncData() {
+//   isSyncing.value = true
+//   syncMessage.value = ''
 
-  try {
-    const result = await syncFinanceData(store)
+//   try {
+//     const result = await syncFinanceData(store)
 
-    if (result.status === 'uploaded') {
-      syncMessage.value = 'Сервер обновлен'
-    } else if (result.status === 'downloaded') {
-      syncMessage.value = 'Загружено с сервера'
-    } else {
-      syncMessage.value = 'Все актуально'
-    }
-  } catch {
-    syncMessage.value = 'Ошибка синхронизации'
-  } finally {
-    isSyncing.value = false
-  }
-}
+//     if (result.status === 'uploaded') {
+//       syncMessage.value = 'Сервер обновлен'
+//     } else if (result.status === 'downloaded') {
+//       syncMessage.value = 'Загружено с сервера'
+//     } else {
+//       syncMessage.value = 'Все актуально'
+//     }
+//   } catch {
+//     syncMessage.value = 'Ошибка синхронизации'
+//   } finally {
+//     isSyncing.value = false
+//   }
+// }
 </script>

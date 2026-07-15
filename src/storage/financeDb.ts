@@ -13,7 +13,7 @@ export type FinanceSnapshot = {
   updatedAt: string
 }
 
-const DB_NAME = 'budget-db'
+const DB_NAME = import.meta.env.VITE_DB_NAME;
 const DB_VERSION = 1
 const STORE_NAME = 'finance-data'
 const DATA_KEY = 'current'

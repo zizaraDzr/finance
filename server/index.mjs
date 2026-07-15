@@ -1,4 +1,5 @@
-import { createServer } from 'node:http'
+// import { createServer } from 'node:http'
+import { createServer } from 'node:https'  // меняем http на https
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { createReadStream, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -7,6 +8,10 @@ import process from 'node:process'
 const rootDir = process.cwd()
 loadEnvFile(path.join(rootDir, '.env'))
 loadEnvFile(path.join(rootDir, '.env.local'))
+const options = {
+  key: readFileSync('selfsigned.key'),
+  cert: readFileSync('selfsigned.crt')
+}
 
 const port = Number(process.env.PORT || 4173)
 const syncToken = process.env.SYNC_TOKEN || ''
@@ -16,7 +21,7 @@ const financeDataFile = process.env.FINANCE_DATA_FILE
   ? path.resolve(rootDir, process.env.FINANCE_DATA_FILE)
   : path.join(rootDir, 'data', 'finance-data.json')
 
-const server = createServer(async (request, response) => {
+const server = createServer(options, async (request, response) => {
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
 
