@@ -29,6 +29,61 @@ button {
   padding: 40px 18px;
 }
 
+.update-widget {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: min(520px, calc(100vw - 36px));
+  padding: 16px;
+  border: 1px solid rgba(216, 199, 255, 0.26);
+  border-radius: 8px;
+  background: rgba(28, 18, 42, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.update-widget strong {
+  color: #fff;
+}
+
+.update-widget p {
+  margin: 4px 0 0;
+  color: #bbaaca;
+  font-size: 0.86rem;
+}
+
+.update-widget__actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.update-widget__button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: #d8c7ff;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.update-widget__button--primary {
+  border-color: rgba(141, 243, 181, 0.62);
+  color: #aef8c9;
+  background: rgba(141, 243, 181, 0.12);
+}
+
+.update-widget__button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .dashboard,
 .add-page,
 .operations-page,
@@ -1076,6 +1131,19 @@ h2 {
 @media (max-width: 760px) {
   .app-shell {
     padding: 26px 12px;
+  }
+
+  .update-widget {
+    right: 12px;
+    bottom: 12px;
+    display: grid;
+    gap: 14px;
+    width: calc(100vw - 24px);
+  }
+
+  .update-widget__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard__header,

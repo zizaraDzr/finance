@@ -97,9 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRegisterSW } from 'virtual:pwa-register/vue'
-
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OperationListItem from '@/components/OperationListItem.vue'
 // import { syncFinanceData } from '@/services/financeSync'
@@ -113,12 +111,6 @@ const route = useRoute()
 const router = useRouter()
 // const isSyncing = ref(false)
 // const syncMessage = ref('')
-const { needRefresh, updateServiceWorker } = useRegisterSW()
-watch(needRefresh, (newValue) => {
-  if (newValue && confirm('Доступна новая версия. Обновить?')) {
-    updateServiceWorker(true)
-  }
-})
 
 const selectedMonthKey = computed(() => {
   const month = typeof route.query.month === 'string' ? route.query.month : null
