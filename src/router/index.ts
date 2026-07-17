@@ -53,6 +53,7 @@ const router = createRouter({
             month: to.query.month,
             from: to.query.from,
             period: to.query.period,
+            type: to.query.type,
           },
         }
       },

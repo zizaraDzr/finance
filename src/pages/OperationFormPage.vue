@@ -148,6 +148,7 @@ function goBack(month = selectedMonthKey.value) {
       query: {
         month,
         period: typeof route.query.period === 'string' ? route.query.period : 'day',
+        type: typeof route.query.type === 'string' ? route.query.type : 'expense',
       },
     })
     return

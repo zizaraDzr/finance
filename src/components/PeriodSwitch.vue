@@ -1,9 +1,17 @@
 <template>
   <section class="operations-toolbar" aria-label="Фильтры операций">
-    <div class="operations-total" :class="summary.balance >= 0 ? 'operations-total--positive' : 'operations-total--negative'">
-      <span>{{ formatOperationsCount(count) }}</span>
-      <strong>{{ formatMoney(summary.balance, currencySymbol) }}</strong>
-    </div>
+    <fieldset class="period-switch operation-type-switch">
+      <legend>Тип операций</legend>
+      <button
+        v-for="option in operationTypeOptions"
+        :key="option.value"
+        type="button"
+        :class="{ 'period-switch__button--active': operationType === option.value }"
+        @click="$emit('update:operationType', option.value)"
+      >
+        {{ option.label }}
+      </button>
+    </fieldset>
 
     <fieldset class="period-switch">
       <legend>Период</legend>
@@ -21,8 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import type { OperationSummary, OperationsPeriod, PeriodOption } from '@/types'
-import { formatMoney, formatOperationsCount } from '@/utils/formatters'
+import type { OperationTypeFilter, OperationsPeriod, PeriodOption } from '@/types'
 
 const periodOptions: PeriodOption[] = [
   { value: 'day', label: 'День' },
@@ -30,15 +37,18 @@ const periodOptions: PeriodOption[] = [
   { value: 'month', label: 'Месяц' },
   { value: 'year', label: 'Год' },
 ]
+const operationTypeOptions: Array<{ value: OperationTypeFilter; label: string }> = [
+  { value: 'expense', label: 'Расходы' },
+  { value: 'income', label: 'Доходы' },
+]
 
 defineProps<{
-  count: number
-  currencySymbol: string
   modelValue: OperationsPeriod
-  summary: OperationSummary
+  operationType: OperationTypeFilter
 }>()
 
 defineEmits<{
   'update:modelValue': [value: OperationsPeriod]
+  'update:operationType': [value: OperationTypeFilter]
 }>()
 </script>

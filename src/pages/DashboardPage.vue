@@ -27,27 +27,18 @@
     </header>
 
     <section class="metrics" aria-label="Сводка доходов и расходов за месяц">
-      <article class="metric-card metric-card--income">
-        <div class="metric-card__topline">
-          <span>Доход</span>
-          <span class="metric-card__marker"></span>
+      <button class="metric-card metric-card--expense metric-card--button" type="button"
+        @click="openExpenseAnalyticsPage">
+        <div style="height: 100%; display: grid; align-items: start;">
+          <div class="metric-card__topline">
+            <span>Расход</span>
+            <span class="metric-card__marker"></span>
+          </div>
+          <strong>{{ formatMoney(currentMonth.expense, store.currencySymbol) }}</strong>
         </div>
-        <strong>{{ formatMoney(currentMonth.income, store.currencySymbol) }}</strong>
-        <p>{{ formatOperationsCount(currentMonth.count) }} за месяц</p>
-      </article>
-
-      <button
-        class="metric-card metric-card--expense metric-card--button"
-        type="button"
-        @click="openExpenseAnalyticsPage"
-      >
-        <div class="metric-card__topline">
-          <span>Расход</span>
-          <span class="metric-card__marker"></span>
-        </div>
-        <strong>{{ formatMoney(currentMonth.expense, store.currencySymbol) }}</strong>
-        <p class="expense-trend" :class="expenseTrendClass">{{ expenseTrendText }}</p>
       </button>
+
+      <ExpenseTrendChart :selected-month-key="selectedMonthKey" />
     </section>
 
     <section class="details-grid">
@@ -99,12 +90,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import OperationListItem from '@/components/OperationListItem.vue'
 // import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
 import { getMonthKey, isValidMonthKey, shiftMonthKey } from '@/utils/date'
-import { formatDate, formatMoney, formatMonthTitle, formatOperationsCount } from '@/utils/formatters'
-import { getExpenseTrend } from '@/utils/monthly'
+import { formatDate, formatMoney, formatMonthTitle } from '@/utils/formatters'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -130,11 +121,6 @@ const recentOperations = computed(() =>
     .sort((first, second) => new Date(second.date).getTime() - new Date(first.date).getTime())
     .slice(0, 5),
 )
-
-const expenseTrend = computed(() => getExpenseTrend(currentMonth.value, previousMonth.value))
-
-const expenseTrendText = computed(() => expenseTrend.value.text)
-const expenseTrendClass = computed(() => `expense-trend--${expenseTrend.value.tone}`)
 
 function openAddPage() {
   router.push({

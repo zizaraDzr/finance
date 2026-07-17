@@ -9,11 +9,10 @@
     </header>
 
     <PeriodSwitch
-      :count="sortedOperations.length"
-      :currency-symbol="store.currencySymbol"
       :model-value="operationsPeriod"
-      :summary="operationsSummary"
+      :operation-type="operationType"
       @update:model-value="setOperationsPeriod"
+      @update:operation-type="setOperationType"
     />
 
     <p v-if="operationGroups.length === 0" class="empty-state">Операций пока нет.</p>
@@ -49,9 +48,9 @@ import { useRoute, useRouter } from 'vue-router'
 import OperationPeriodGroup from '@/components/OperationPeriodGroup.vue'
 import PeriodSwitch from '@/components/PeriodSwitch.vue'
 import { useFinanceStore } from '@/stores/finance'
-import type { Operation, OperationsPeriod } from '@/types'
+import type { Operation, OperationTypeFilter, OperationsPeriod } from '@/types'
 import { getMonthKey, isValidMonthKey } from '@/utils/date'
-import { buildOperationPeriodGroups, sortOperationsByDateDesc, summarizeOperations } from '@/utils/operations'
+import { buildOperationPeriodGroups, sortOperationsByDateDesc } from '@/utils/operations'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -72,10 +71,16 @@ const operationsPeriod = computed<OperationsPeriod>(() => {
   const period = typeof route.query.period === 'string' ? route.query.period : null
   return isOperationsPeriod(period) ? period : 'day'
 })
+const operationType = computed<OperationTypeFilter>(() => {
+  const type = typeof route.query.type === 'string' ? route.query.type : null
+  return isOperationTypeFilter(type) ? type : 'expense'
+})
 const sortedOperations = computed(() => sortOperationsByDateDesc(store.activeOperations))
-const operationsSummary = computed(() => summarizeOperations(sortedOperations.value))
+const filteredOperations = computed(() =>
+  sortedOperations.value.filter(operation => operation.type === getOperationNumericType(operationType.value)),
+)
 const operationGroups = computed(() =>
-  buildOperationPeriodGroups(sortedOperations.value, operationsPeriod.value, {
+  buildOperationPeriodGroups(filteredOperations.value, operationsPeriod.value, {
     getCategoryName: store.getCategoryName,
     getSubcategory: store.getSubcategory,
   }),
@@ -90,7 +95,7 @@ const nextOperationGroupsCount = computed(() =>
 )
 
 watch(
-  [operationsPeriod, selectedMonthKey],
+  [operationsPeriod, operationType, selectedMonthKey],
   ([period]) => {
     visibleOperationGroupsCount.value = operationGroupPageSizes[period]
   },
@@ -112,6 +117,18 @@ function setOperationsPeriod(period: OperationsPeriod) {
     query: {
       month: selectedMonthKey.value,
       period,
+      type: operationType.value,
+    },
+  })
+}
+
+function setOperationType(type: OperationTypeFilter) {
+  router.push({
+    name: 'operations',
+    query: {
+      month: selectedMonthKey.value,
+      period: operationsPeriod.value,
+      type,
     },
   })
 }
@@ -130,6 +147,7 @@ function openEditPage(operation: Operation) {
       month: getMonthKey(new Date(operation.date)),
       from: 'operations',
       period: operationsPeriod.value,
+      type: operationType.value,
     },
   })
 }
@@ -140,5 +158,13 @@ async function removeOperation(operation: Operation) {
 
 function isOperationsPeriod(value: string | null): value is OperationsPeriod {
   return value === 'day' || value === 'week' || value === 'month' || value === 'year'
+}
+
+function isOperationTypeFilter(value: string | null): value is OperationTypeFilter {
+  return value === 'income' || value === 'expense'
+}
+
+function getOperationNumericType(type: OperationTypeFilter) {
+  return type === 'income' ? 0 : 1
 }
 </script>
