@@ -44,6 +44,30 @@
             {{ label.label }}
           </text>
         </g>
+        <!-- Существующая линия today -->
+        <line v-if="currentMarkerX !== null" class="trend-chart__today" :x1="currentMarkerX" :x2="currentMarkerX"
+          :y1="chartPlotTop" :y2="chartHeight - chartPlotBottom" />
+
+        <!-- ТОЧКИ на пересечении с today -->
+        <g v-if="currentMarkerX !== null && todayValues">
+          <!-- Точка на текущей линии -->
+          <circle class="trend-chart__dot trend-chart__dot--current" :cx="currentMarkerX"
+            :cy="getChartY(todayValues.currentValue)" r="5" />
+          <!-- Значение текущей линии -->
+          <text class="trend-chart__value trend-chart__value--current" :x="currentMarkerX + 8"
+            :y="getChartY(todayValues.currentValue) - 6">
+            {{ formatMoney(todayValues.currentValue, store.currencySymbol) }}
+          </text>
+
+          <!-- Точка на предыдущей линии -->
+          <circle v-if="todayValues.previousValue !== undefined" class="trend-chart__dot trend-chart__dot--previous"
+            :cx="currentMarkerX" :cy="getChartY(todayValues.previousValue)" r="5" />
+          <!-- Значение предыдущей линии -->
+          <text v-if="todayValues.previousValue !== undefined" class="trend-chart__value trend-chart__value--previous"
+            :x="currentMarkerX + 8" :y="getChartY(todayValues.previousValue) - 6">
+            {{ formatMoney(todayValues.previousValue, store.currencySymbol) }}
+          </text>
+        </g>
       </svg>
     </div>
 
@@ -162,6 +186,34 @@ const chartLabels = computed(() =>
       x: getChartX(index * 2, trendData.value.current.length),
     })),
 )
+const todayValues = computed(() => {
+  const today = new Date()
+  let index: number | null = null
+
+  // Определяем индекс сегодняшнего дня
+  if (props.period === 'year') {
+    if (today.getFullYear() === selectedYear.value) {
+      index = today.getMonth()
+    }
+  } else {
+    if (getMonthKey(today) === props.selectedMonthKey) {
+      index = today.getDate() - 1
+    }
+  }
+
+  // Если сегодняшний день не входит в диапазон
+  if (index === null || index >= trendData.value.current.length) {
+    return null
+  }
+
+  const currentData = trendData.value.current
+  const previousData = trendData.value.previous
+
+  return {
+    currentValue: currentData[index]?.value || 0,
+    previousValue: previousData[index]?.value || 0,
+  }
+})
 const currentMarkerX = computed(() => {
   const today = new Date()
 
@@ -277,3 +329,34 @@ function getChartY(value: number) {
   return chartPlotTop + plotHeight - (value / trendMaxValue.value) * plotHeight
 }
 </script>
+<style>
+/* Точки на пересечении с today */
+.trend-chart__dot {
+  stroke-width: 2;
+  stroke: var(--color-bg, #ffffff);
+}
+
+.trend-chart__dot--current {
+  fill: var(--color-primary, #94A3B8);
+}
+
+.trend-chart__dot--previous {
+  fill: var(--color-secondary, #94A3B8);
+}
+
+/* Значения рядом с точками */
+.trend-chart__value {
+  font-size: 1rem;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.trend-chart__value--current {
+  fill: var(--color-primary, #94A3B8);
+}
+
+.trend-chart__value--previous {
+  fill: var(--color-secondary, #94A3B8);
+}
+</style>
