@@ -1285,9 +1285,9 @@ h2 {
     /* overflow-x: auto; */
   /* } */
 
-  .trend-chart svg {
+  /* .trend-chart svg {
     min-width: 680px;
-  }
+  } */
 
   .operation-form {
     padding: 18px;
