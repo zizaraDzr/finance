@@ -422,6 +422,12 @@ h2 {
   white-space: nowrap;
 }
 
+.analytics-charts {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
 .expense-breakdown {
   display: grid;
   gap: 14px;
@@ -578,6 +584,54 @@ h2 {
   fill: #bbaaca;
   font-size: 0.62rem;
   text-anchor: middle;
+}
+
+.histogram-chart {
+  width: 100%;
+}
+
+.histogram-chart svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.histogram-chart__baseline {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+}
+
+.histogram-chart__average {
+  stroke: rgba(141, 243, 181, 0.74);
+  stroke-dasharray: 7 7;
+  stroke-width: 2;
+}
+
+.histogram-chart__average-label {
+  fill: #aef8c9;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-anchor: end;
+}
+
+.histogram-chart__bar {
+  fill: rgba(255, 115, 127, 0.62);
+}
+
+.histogram-chart__bar--max {
+  fill: #ff737f;
+}
+
+.histogram-chart__label {
+  fill: #bbaaca;
+  font-size: 0.62rem;
+  text-anchor: middle;
+}
+
+.histogram-chart__max-label {
+  fill: #fff9ff;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .trend-description {

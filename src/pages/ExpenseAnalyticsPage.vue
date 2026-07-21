@@ -103,7 +103,10 @@
         </div>
       </article>
 
-      <ExpenseTrendChart :period="analyticsPeriod" :selected-month-key="selectedMonthKey" />
+      <div class="analytics-charts">
+        <ExpenseMonthlyHistogram v-if="analyticsPeriod === 'year'" :selected-year="selectedYear" />
+        <ExpenseTrendChart :period="analyticsPeriod" :selected-month-key="selectedMonthKey" />
+      </div>
     </section>
   </section>
 </template>
@@ -111,6 +114,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ExpenseMonthlyHistogram from '@/components/ExpenseMonthlyHistogram.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation } from '@/types'
