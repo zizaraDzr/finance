@@ -62,6 +62,8 @@ pnpm server
 ```
 
 Сервер:
+pnpm build
+node server/index.mjs
 
 - отдает `GET /api/finance-data`;
 - принимает `PUT /api/finance-data`;

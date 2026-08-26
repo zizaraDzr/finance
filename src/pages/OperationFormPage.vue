@@ -2,6 +2,7 @@
   <section class="add-page">
     <header class="add-page__header">
       <button class="back-button" type="button" @click="goBack()">Назад</button>
+
       <div>
         <p class="eyebrow">{{ isEditPage ? 'Редактирование' : 'Новая операция' }}</p>
         <h1>{{ isEditPage ? 'Редактировать запись' : 'Добавить запись' }}</h1>
@@ -194,4 +195,5 @@ const selectedMonthKey = computed(() => {
   const month = typeof route.query.month === 'string' ? route.query.month : null
   return isValidMonthKey(month) ? month : store.currentMonthKey
 })
+
 </script>
