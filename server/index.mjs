@@ -198,8 +198,16 @@ function getContentType(filePath) {
     return 'text/css; charset=utf-8'
   }
 
-  if (extension === '.json' || extension === '.webmanifest') {
+  if (extension === '.json') {
     return 'application/json; charset=utf-8'
+  }
+
+  if (extension === '.webmanifest') {
+    return 'application/manifest+json; charset=utf-8'
+  }
+
+  if (extension === '.png') {
+    return 'image/png'
   }
 
   if (extension === '.svg') {
