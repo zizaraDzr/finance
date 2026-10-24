@@ -1,5 +1,5 @@
 <template>
-  <section class="add-page">
+  <section class="add-page" :aria-busy="isSubmitting">
     <header class="add-page__header">
       <button class="back-button" type="button" @click="goBack()">Назад</button>
 
@@ -36,8 +36,15 @@
 
       <p v-if="formError" class="form-error">{{ formError }}</p>
 
-      <button class="submit-button" type="submit">{{ isEditPage ? 'Сохранить' : 'Добавить' }}</button>
+      <button class="submit-button" type="submit" :disabled="isSubmitting">
+        {{ isEditPage ? 'Сохранить' : 'Добавить' }}
+      </button>
     </form>
+
+    <div v-if="isSubmitting" class="page-loader" role="status" aria-live="polite">
+      <span class="page-loader__spinner" aria-hidden="true"></span>
+      <p>{{ isEditPage ? 'Сохраняем изменения…' : 'Сохраняем запись…' }}</p>
+    </div>
   </section>
 </template>
 
@@ -54,6 +61,7 @@ const store = useFinanceStore()
 const route = useRoute()
 const router = useRouter()
 const formError = ref('')
+const isSubmitting = ref(false)
 const form = ref({
   sum: null as number | null,
   type: 1,
@@ -85,6 +93,10 @@ watch(
 )
 
 async function submitOperation() {
+  if (isSubmitting.value) {
+    return
+  }
+
   formError.value = ''
   const sum = form.value.sum
 
@@ -97,6 +109,8 @@ async function submitOperation() {
     formError.value = 'Выберите категорию.'
     return
   }
+
+  isSubmitting.value = true
 
   try {
     const operationDate = createOperationDate(form.value.date)
@@ -115,7 +129,7 @@ async function submitOperation() {
         subcategoryID: selectedCategory.value.subcategoryID,
       })
       resetForm()
-      goBack(getMonthKey(operationDate))
+      await goBack(getMonthKey(operationDate))
       return
     }
 
@@ -135,16 +149,18 @@ async function submitOperation() {
     })
 
     resetForm()
-    goBack(getMonthKey(new Date(operation.date)))
+    await goBack(getMonthKey(new Date(operation.date)))
   } catch (err) {
     // formError.value = 'Не удалось сохранить запись. Попробуйте еще раз.'
     formError.value = `${err }`
+  } finally {
+    isSubmitting.value = false
   }
 }
 
-function goBack(month = selectedMonthKey.value) {
+async function goBack(month = selectedMonthKey.value) {
   if (route.query.from === 'operations') {
-    router.push({
+    await router.push({
       name: 'operations',
       query: {
         month,
@@ -155,7 +171,7 @@ function goBack(month = selectedMonthKey.value) {
     return
   }
 
-  router.push({
+  await router.push({
     name: 'dashboard',
     query: {
       month,

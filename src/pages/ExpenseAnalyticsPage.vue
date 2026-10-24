@@ -23,7 +23,10 @@
     <section class="operations-toolbar analytics-toolbar" aria-label="Период аналитики">
       <div class="operations-total operations-total--negative">
         <span>{{ analyticsPeriodLabel }}</span>
-        <strong>{{ formatMoney(totalExpense, store.currencySymbol) }}</strong>
+        <!-- key заставляет iOS Safari перерисовать текст после смены периода/суммы -->
+        <strong :key="`${analyticsPeriod}-${selectedMonthKey}-${totalExpense}`">
+          {{ formatMoney(totalExpense, store.currencySymbol) }}
+        </strong>
       </div>
 
       <fieldset class="period-switch analytics-period-switch">

@@ -404,7 +404,17 @@ h2 {
 }
 
 .analytics-toolbar {
+  flex-wrap: wrap;
+  overflow: visible;
   margin-bottom: 18px;
+}
+
+.analytics-toolbar .operations-total {
+  min-width: 0;
+}
+
+.analytics-toolbar .analytics-period-switch {
+  margin-left: auto;
 }
 
 .analytics-period-switch {
@@ -1211,9 +1221,59 @@ h2 {
   font-weight: 900;
 }
 
+.submit-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: rgba(12, 8, 20, 0.72);
+  color: #f8f4ff;
+  backdrop-filter: blur(6px);
+}
+
+.page-loader p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.page-loader__spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(216, 199, 255, 0.22);
+  border-top-color: #b9a4ff;
+  border-radius: 50%;
+  animation: page-loader-spin 0.8s linear infinite;
+}
+
+@keyframes page-loader-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
-    padding: 26px 12px;
+    padding:
+      calc(26px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+      calc(26px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  }
+
+  .metric-card,
+  .panel,
+  .operation-form,
+  .operations-toolbar,
+  .operations-period {
+    background: rgba(28, 18, 42, 0.94);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .update-widget {
