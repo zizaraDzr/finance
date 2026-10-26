@@ -106,7 +106,8 @@
       </article>
 
       <div class="analytics-charts">
-        <ExpenseMonthlyHistogram v-if="analyticsPeriod === 'year'" :selected-year="selectedYear" />
+        <ExpenseMonthlyHistogram v-if="analyticsPeriod === 'year'" :selected-year="selectedYear"
+          @select-month="openMonthAnalytics" />
         <ExpenseTrendChart :period="analyticsPeriod" :selected-month-key="selectedMonthKey" />
       </div>
     </section>
@@ -251,6 +252,16 @@ function setSelectedMonth(month: string) {
     query: {
       month,
       expensePeriod: analyticsPeriod.value,
+    },
+  })
+}
+
+function openMonthAnalytics(month: string) {
+  router.push({
+    name: 'expense-analytics',
+    query: {
+      month,
+      expensePeriod: 'month',
     },
   })
 }

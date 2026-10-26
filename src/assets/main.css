@@ -665,6 +665,41 @@ h2 {
   font-weight: 800;
 }
 
+.histogram-chart__month {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.histogram-chart__month--disabled {
+  cursor: default;
+}
+
+.histogram-chart__hit-area {
+  fill: transparent;
+}
+
+.histogram-chart__month:focus {
+  outline: none;
+}
+
+.histogram-chart__month:not(.histogram-chart__month--disabled):hover .histogram-chart__hit-area,
+.histogram-chart__month:focus-visible .histogram-chart__hit-area {
+  fill: rgba(255, 255, 255, 0.07);
+}
+
+.histogram-chart__month:focus-visible .histogram-chart__hit-area {
+  stroke: rgba(255, 115, 127, 0.9);
+  stroke-width: 1.5;
+}
+
+.histogram-chart__month:not(.histogram-chart__month--disabled):hover .histogram-chart__bar {
+  fill: rgba(255, 140, 150, 0.9);
+}
+
+.histogram-chart__month:not(.histogram-chart__month--disabled):hover .histogram-chart__bar--max {
+  fill: #ff9aa2;
+}
+
 .trend-description {
   margin: 14px 0 0;
   color: #f2eaff;

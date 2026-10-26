@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ExpenseAnalyticsPage from '@/pages/ExpenseAnalyticsPage.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { FinanceData } from '@/storage/financeDb'
+import { getMonthKey } from '@/utils/date'
 import { createAccount, createCategory, createOperation, createSubcategory } from '@/test/fixtures'
 
-async function mountPage(data: FinanceData = {}) {
+async function mountPage(
+  data: FinanceData = {},
+  url = '/expense-analytics?month=2026-10&expensePeriod=month',
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const store = useFinanceStore()
@@ -27,7 +31,7 @@ async function mountPage(data: FinanceData = {}) {
       { path: '/expense-analytics', name: 'expense-analytics', component: { template: '<div />' } },
     ],
   })
-  await router.push('/expense-analytics?month=2026-10&expensePeriod=month')
+  await router.push(url)
   await router.isReady()
 
   const wrapper = mount(ExpenseAnalyticsPage, {
@@ -79,5 +83,33 @@ describe('ExpenseAnalyticsPage', () => {
     expect(subcategories.text()).toContain('Молочные')
     expect(subcategories.text()).toContain('Продукты')
     expect(subcategories.text()).not.toContain('Без подкатегории')
+  })
+
+  it('switches to the analytics of the month clicked in the yearly histogram', async () => {
+    const currentMonthKey = getMonthKey(new Date())
+    const currentMonthIndex = Number(currentMonthKey.slice(5, 7)) - 1
+    const { wrapper, router } = await mountPage(
+      {
+        Operation: [
+          createOperation({
+            id: 'op-current-month',
+            categoryID: 'cat-food',
+            sum: 300,
+            date: new Date().toISOString(),
+          }),
+        ],
+      },
+      `/expense-analytics?month=${currentMonthKey}&expensePeriod=year`,
+    )
+
+    const columns = wrapper.findAll('.histogram-chart__month')
+    expect(columns).toHaveLength(12)
+
+    await columns[currentMonthIndex]?.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('expense-analytics')
+    expect(router.currentRoute.value.query.month).toBe(currentMonthKey)
+    expect(router.currentRoute.value.query.expensePeriod).toBe('month')
   })
 })

@@ -11,7 +11,7 @@
     <p v-if="totalExpense === 0" class="empty-state">За этот год расходов пока нет.</p>
 
     <div v-else class="histogram-chart">
-      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" role="img" aria-label="Расходы по месяцам">
+      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" role="group" aria-label="Расходы по месяцам">
         <line
           class="histogram-chart__baseline"
           :x1="chartPlotLeft"
@@ -34,7 +34,27 @@
           Среднее {{ formatMoney(averageExpense, store.currencySymbol) }}
         </text>
 
-        <g v-for="month in monthlyExpenses" :key="month.key">
+        <g
+          v-for="month in monthlyExpenses"
+          :key="month.key"
+          class="histogram-chart__month"
+          :class="{ 'histogram-chart__month--disabled': !isMonthSelectable(month.key) }"
+          role="button"
+          :tabindex="isMonthSelectable(month.key) ? 0 : -1"
+          :aria-label="getMonthAriaLabel(month)"
+          :aria-disabled="isMonthSelectable(month.key) ? undefined : 'true'"
+          @click="selectMonth(month.key)"
+          @keydown.enter.prevent="selectMonth(month.key)"
+          @keydown.space.prevent="selectMonth(month.key)"
+        >
+          <!-- Прозрачная область на всю колонку: клик/тап по пустому месту и подписи тоже открывает месяц -->
+          <rect
+            class="histogram-chart__hit-area"
+            :x="getMonthSlotX(month.index)"
+            :y="chartPlotTop"
+            :width="monthSlotWidth"
+            :height="chartHeight - chartPlotTop"
+          />
           <rect
             class="histogram-chart__bar"
             :class="{ 'histogram-chart__bar--max': month.index === maxExpenseIndex }"
@@ -73,10 +93,21 @@
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { isValidDate } from '@/utils/date'
-import { formatMoney } from '@/utils/formatters'
+import { formatMoney, formatMonthTitle } from '@/utils/formatters'
+
+type MonthlyExpense = {
+  amount: number
+  index: number
+  key: string
+  label: string
+}
 
 const props = defineProps<{
   selectedYear: number
+}>()
+
+const emit = defineEmits<{
+  selectMonth: [monthKey: string]
 }>()
 
 const store = useFinanceStore()
@@ -104,7 +135,7 @@ const barGapRatio = 0.38
 
 const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
 const currentMonthNumber = computed(() => Number(store.currentMonthKey.slice(5, 7)))
-const monthlyExpenses = computed(() => {
+const monthlyExpenses = computed<MonthlyExpense[]>(() => {
   const amounts = Array.from({ length: 12 }, () => 0)
 
   store.activeOperations.forEach((operation) => {
@@ -155,6 +186,26 @@ function getBarX(index: number) {
 
 function getBarCenterX(index: number) {
   return getBarX(index) + barWidth.value / 2
+}
+
+function getMonthSlotX(index: number) {
+  return chartPlotLeft + monthSlotWidth.value * index
+}
+
+function isMonthSelectable(monthKey: string) {
+  return monthKey <= store.currentMonthKey
+}
+
+function getMonthAriaLabel(month: MonthlyExpense) {
+  return `${formatMonthTitle(month.key)}, расходы: ${formatMoney(month.amount, store.currencySymbol)}`
+}
+
+function selectMonth(monthKey: string) {
+  if (!isMonthSelectable(monthKey)) {
+    return
+  }
+
+  emit('selectMonth', monthKey)
 }
 
 function getBarY(amount: number) {
