@@ -1023,6 +1023,16 @@ h2 {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.subcategory-breakdown--single {
+  padding-left: 0;
+  background-color: transparent;
+}
+
+.subcategory-breakdown--single .subcategory-breakdown__group {
+  padding: 0;
+  border-top: 0;
+}
+
 .operation-list--compact li {
   min-height: 48px;
   padding: 10px 0;

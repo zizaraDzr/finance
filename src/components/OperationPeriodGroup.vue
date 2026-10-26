@@ -64,9 +64,13 @@
           </div>
         </div>
 
-        <div v-if="isAccordionOpen(getCategoryAccordionKey(category.key))" class="subcategory-breakdown">
+        <div
+          v-if="isAccordionOpen(getCategoryAccordionKey(category.key))"
+          class="subcategory-breakdown"
+          :class="{ 'subcategory-breakdown--single': category.subcategories.length === 1 }"
+        >
           <article v-for="subcategory in category.subcategories" :key="subcategory.key" class="subcategory-breakdown__group">
-            <div class="subcategory-breakdown__header">
+            <div v-if="category.subcategories.length > 1" class="subcategory-breakdown__header">
               <div class="breakdown-title">
                 <button
                   class="accordion-toggle accordion-toggle--subtle"
@@ -89,7 +93,10 @@
               </b>
             </div>
 
-            <ul v-if="isAccordionOpen(getSubcategoryAccordionKey(category.key, subcategory.key))" class="operation-list operation-list--compact">
+            <ul
+              v-if="category.subcategories.length === 1 || isAccordionOpen(getSubcategoryAccordionKey(category.key, subcategory.key))"
+              class="operation-list operation-list--compact"
+            >
               <OperationListItem
                 v-for="operation in subcategory.operations"
                 :key="operation.id"
