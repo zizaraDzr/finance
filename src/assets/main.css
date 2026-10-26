@@ -97,7 +97,8 @@ button {
 .dashboard,
 .add-page,
 .operations-page,
-.analytics-page {
+.analytics-page,
+.categories-page {
   width: min(1120px, 100%);
   margin: 0 auto;
 }
@@ -105,7 +106,8 @@ button {
 .dashboard__header,
 .add-page__header,
 .operations-page__header,
-.analytics-page__header {
+.analytics-page__header,
+.categories-page__header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -115,12 +117,16 @@ button {
 
 .add-page__header,
 .operations-page__header,
-.analytics-page__header {
+.analytics-page__header,
+.categories-page__header {
   align-items: center;
   justify-content: flex-start;
 }
 
 .month-heading {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
   min-width: 0;
 }
 
@@ -132,6 +138,7 @@ button {
 
 .add-button,
 .back-button,
+.categories-button,
 .sync-button,
 .submit-button,
 .panel-link-button,
@@ -168,6 +175,15 @@ button {
   border-radius: 999px;
 }
 
+.categories-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #d8c7ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .sync-button {
   display: grid;
   align-content: center;
@@ -193,6 +209,7 @@ button {
 
 .add-button:hover,
 .back-button:hover,
+.categories-button:hover,
 .sync-button:hover,
 .submit-button:hover,
 .panel-link-button:hover,
@@ -686,6 +703,18 @@ h2 {
   font-size: 0.8rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.panel-link-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+  transform: none;
+}
+
+.panel-link-button--primary {
+  border-color: rgba(141, 243, 181, 0.62);
+  color: #aef8c9;
+  background: rgba(141, 243, 181, 0.12);
 }
 
 .comparison {
@@ -1226,6 +1255,231 @@ h2 {
   opacity: 0.72;
 }
 
+.categories-page {
+  display: grid;
+  gap: 18px;
+}
+
+.categories-page__header {
+  margin-bottom: 0;
+}
+
+.categories-type-switch {
+  max-width: 420px;
+}
+
+.category-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.category-create__submit {
+  min-height: 52px;
+  padding: 0 18px;
+}
+
+.category-manager {
+  display: grid;
+  padding: 0;
+}
+
+.category-manager__item {
+  display: grid;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.category-manager__item:last-child {
+  border-bottom: 0;
+}
+
+.category-manager__item--new {
+  animation: category-item-appear 260ms ease-out;
+}
+
+@keyframes category-item-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-manager__row,
+.category-manager__actions,
+.category-manager__title,
+.category-edit__fields,
+.category-edit__type,
+.subcategory-manager__row,
+.subcategory-manager__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-manager__row,
+.subcategory-manager__row {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.category-manager__title,
+.subcategory-manager__title {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.category-manager__title strong,
+.subcategory-manager__title strong {
+  color: #fff;
+}
+
+.category-manager__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.category-manager__meta {
+  color: #bbaaca;
+  font-size: 0.8rem;
+}
+
+.category-manager__badge {
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 141, 151, 0.4);
+  border-radius: 999px;
+  color: #ffb5bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.category-manager__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.category-manager__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: #d8c7ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.category-manager__toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #8df3b5;
+}
+
+.category-input {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+.category-input:focus {
+  border-color: rgba(216, 199, 255, 0.68);
+  box-shadow: 0 0 0 4px rgba(132, 89, 255, 0.18);
+}
+
+.category-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.category-edit__fields {
+  flex-wrap: wrap;
+}
+
+.category-edit__input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.category-edit__input--icon {
+  flex: 0 0 90px;
+}
+
+.category-edit__type {
+  flex-wrap: wrap;
+}
+
+.category-edit__type > span {
+  color: #d8c7ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.category-edit__type .category-edit__type-button--expense {
+  border-color: rgba(255, 141, 151, 0.6);
+  color: #ffb5bd;
+  background: rgba(211, 87, 111, 0.16);
+}
+
+.category-edit__type .category-edit__type-button--income {
+  border-color: rgba(141, 243, 181, 0.6);
+  color: #aef8c9;
+  background: rgba(141, 243, 181, 0.12);
+}
+
+.category-edit__hint {
+  margin: 0;
+  color: #ffb5bd;
+  font-size: 0.78rem;
+}
+
+.subcategory-create {
+  display: flex;
+  gap: 8px;
+}
+
+.subcategory-create .category-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.subcategory-manager {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subcategory-manager__item {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.subcategory-manager__row {
+  gap: 10px;
+}
+
+.subcategory-manager__title strong {
+  font-size: 0.9rem;
+}
+
+.subcategory-manager__input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
 .page-loader {
   position: fixed;
   inset: 0;
@@ -1334,7 +1588,8 @@ h2 {
 
   .add-page__header,
   .operations-page__header,
-  .analytics-page__header {
+  .analytics-page__header,
+  .categories-page__header {
     display: grid;
     justify-items: start;
   }
@@ -1417,5 +1672,48 @@ h2 {
 
   .operation-actions button {
     padding: 0 8px;
+  }
+
+  .category-create {
+    grid-template-columns: 1fr;
+  }
+
+  .category-create__submit {
+    width: 100%;
+  }
+
+  .category-manager__item {
+    padding: 14px;
+  }
+
+  .category-manager__row,
+  .subcategory-manager__row {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .category-manager__actions {
+    justify-content: flex-start;
+  }
+
+  .category-edit__fields {
+    display: grid;
+  }
+
+  .category-edit__input,
+  .category-edit__input--icon {
+    width: 100%;
+  }
+
+  .subcategory-create {
+    flex-wrap: wrap;
+  }
+
+  .subcategory-create .category-input {
+    flex: 1 1 160px;
+  }
+
+  .subcategory-manager__input {
+    flex: 1 1 auto;
   }
 }

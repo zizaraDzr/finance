@@ -98,7 +98,7 @@ function buildCategoryGroups(operations: Operation[], names: OperationNames) {
     }
     const subcategory =
       category.subcategories.find(item => item.key === subcategoryKey) ||
-      createSubcategoryGroup(subcategoryKey, operation, names)
+      createSubcategoryGroup(subcategoryKey, operation, names, category.name)
 
     applyOperationToSummary(category, operation)
     applyOperationToSummary(subcategory, operation)
@@ -129,10 +129,13 @@ function createSubcategoryGroup(
   key: string,
   operation: Operation,
   names: OperationNames,
+  categoryName: string,
 ): OperationSubcategoryGroup {
   return {
     key,
-    name: operation.subcategoryID ? names.getSubcategory(operation.subcategoryID)?.name || 'Без подкатегории' : 'Без подкатегории',
+    name: operation.subcategoryID
+      ? names.getSubcategory(operation.subcategoryID)?.name || categoryName
+      : categoryName,
     operations: [],
     ...createEmptySummary(),
   }

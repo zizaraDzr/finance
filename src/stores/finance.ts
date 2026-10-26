@@ -21,6 +21,8 @@ export type MonthlySummary = {
 }
 
 export type NewOperation = Omit<Operation, 'id' | 'isDeleted'>
+export type NewCategory = Omit<Category, 'id' | 'isDeleted'>
+export type NewSubcategory = Omit<Subcategory, 'id' | 'isDeleted'>
 
 function emptyMonthSummary(month: string): MonthlySummary {
   return {
@@ -207,6 +209,124 @@ export const useFinanceStore = defineStore('finance', () => {
     }
   }
 
+  async function addCategory(category: NewCategory) {
+    const newCategory: Category = {
+      ...category,
+      id: generateGuid(),
+      isDeleted: false,
+    }
+
+    categories.value.push(newCategory)
+
+    try {
+      await saveToIndexedDB()
+    } catch (error) {
+      categories.value = categories.value.filter(item => item.id !== newCategory.id)
+      throw error
+    }
+
+    return newCategory
+  }
+
+  async function updateCategory(id: string, data: Partial<Category>) {
+    const index = categories.value.findIndex(category => category.id === id)
+    const currentCategory = categories.value[index]
+
+    if (currentCategory) {
+      const previousCategory = { ...currentCategory }
+      categories.value[index] = { ...currentCategory, ...data }
+
+      try {
+        await saveToIndexedDB()
+      } catch (error) {
+        categories.value[index] = previousCategory
+        throw error
+      }
+    }
+  }
+
+  async function deleteCategory(id: string) {
+    const category = categories.value.find(item => item.id === id)
+
+    if (!category) {
+      return
+    }
+
+    const previousCategoryDeleted = category.isDeleted
+    const categorySubcategories = subcategories.value
+      .filter(item => item.categoryID === id)
+      .map(item => ({ item, isDeleted: item.isDeleted }))
+
+    category.isDeleted = true
+    categorySubcategories.forEach(({ item }) => {
+      item.isDeleted = true
+    })
+
+    try {
+      await saveToIndexedDB()
+    } catch (error) {
+      category.isDeleted = previousCategoryDeleted
+      categorySubcategories.forEach(({ item, isDeleted }) => {
+        item.isDeleted = isDeleted
+      })
+      throw error
+    }
+  }
+
+  async function addSubcategory(subcategory: NewSubcategory) {
+    const newSubcategory: Subcategory = {
+      ...subcategory,
+      id: generateGuid(),
+      isDeleted: false,
+    }
+
+    subcategories.value.push(newSubcategory)
+
+    try {
+      await saveToIndexedDB()
+    } catch (error) {
+      subcategories.value = subcategories.value.filter(item => item.id !== newSubcategory.id)
+      throw error
+    }
+
+    return newSubcategory
+  }
+
+  async function updateSubcategory(id: string, data: Partial<Subcategory>) {
+    const index = subcategories.value.findIndex(subcategory => subcategory.id === id)
+    const currentSubcategory = subcategories.value[index]
+
+    if (currentSubcategory) {
+      const previousSubcategory = { ...currentSubcategory }
+      subcategories.value[index] = { ...currentSubcategory, ...data }
+
+      try {
+        await saveToIndexedDB()
+      } catch (error) {
+        subcategories.value[index] = previousSubcategory
+        throw error
+      }
+    }
+  }
+
+  async function deleteSubcategory(id: string) {
+    const subcategory = subcategories.value.find(item => item.id === id)
+
+    if (!subcategory) {
+      return
+    }
+
+    const previousSubcategoryDeleted = subcategory.isDeleted
+    subcategory.isDeleted = true
+
+    try {
+      await saveToIndexedDB()
+    } catch (error) {
+      subcategory.isDeleted = previousSubcategoryDeleted
+      throw error
+    }
+  }
+
   function getCategory(id: string | null) {
     if (!id) {
       return null
@@ -257,6 +377,12 @@ export const useFinanceStore = defineStore('finance', () => {
     updateOperation,
     deleteOperation,
     restoreOperation,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubcategory,
+    updateSubcategory,
+    deleteSubcategory,
     getCategory,
     getSubcategory,
     getCategoryName,

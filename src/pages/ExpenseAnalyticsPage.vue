@@ -305,7 +305,7 @@ function buildExpenseGroups(operations: Operation[], total: number) {
     }
     const subcategory =
       category.subcategories.find(item => item.key === subcategoryKey) ||
-      createExpenseSubcategory(subcategoryKey, operation)
+      createExpenseSubcategory(subcategoryKey, operation, category.name)
 
     category.amount += operation.sum
     category.count += 1
@@ -333,12 +333,16 @@ function buildExpenseGroups(operations: Operation[], total: number) {
     .sort((first, second) => second.amount - first.amount)
 }
 
-function createExpenseSubcategory(key: string, operation: Operation): ExpenseSubcategoryGroup {
+function createExpenseSubcategory(
+  key: string,
+  operation: Operation,
+  categoryName: string,
+): ExpenseSubcategoryGroup {
   return {
     key,
     name: operation.subcategoryID
-      ? store.getSubcategory(operation.subcategoryID)?.name || 'Без подкатегории'
-      : 'Без подкатегории',
+      ? store.getSubcategory(operation.subcategoryID)?.name || categoryName
+      : categoryName,
     amount: 0,
     count: 0,
     percent: 0,
