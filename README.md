@@ -47,6 +47,18 @@ pnpm build
 pnpm lint
 ```
 
+### Run unit tests with [Vitest](https://vitest.dev/)
+
+```sh
+pnpm test
+```
+
+Для режима наблюдения:
+
+```sh
+pnpm test:watch
+```
+
 ## Offline-first и синхронизация
 
 Приложение хранит рабочие данные в IndexedDB. `default.json` используется как стартовый набор данных, если на устройстве еще нет локальной базы и локальный сервер недоступен.

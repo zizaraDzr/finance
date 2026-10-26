@@ -1,4 +1,4 @@
-export const minOperationLoaderDuration = 500
+export const minOperationLoaderDuration = 800
 
 export function waitForMinimumDuration(startedAt: number, duration = minOperationLoaderDuration) {
   const remaining = duration - (Date.now() - startedAt)
