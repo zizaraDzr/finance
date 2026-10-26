@@ -114,9 +114,15 @@ function buildCategoryGroups(operations: Operation[], names: OperationNames) {
   return Array.from(categoryMap.values())
     .map(category => ({
       ...category,
-      subcategories: category.subcategories.sort((first, second) => second.count - first.count),
+      subcategories: category.subcategories.sort(
+        (first, second) => getGroupAmount(second) - getGroupAmount(first),
+      ),
     }))
-    .sort((first, second) => second.count - first.count)
+    .sort((first, second) => getGroupAmount(second) - getGroupAmount(first))
+}
+
+function getGroupAmount(group: OperationSummary) {
+  return group.income + group.expense
 }
 
 function createSubcategoryGroup(

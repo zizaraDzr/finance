@@ -4,8 +4,7 @@
       <button class="back-button" type="button" @click="goBack()">Назад</button>
 
       <div>
-        <p class="eyebrow">{{ isEditPage ? 'Редактирование' : 'Новая операция' }}</p>
-        <h1>{{ isEditPage ? 'Редактировать запись' : 'Добавить запись' }}</h1>
+        <h3>{{ isEditPage ? 'Редактировать запись' : 'Добавить запись' }}</h3>
       </div>
     </header>
 
@@ -56,6 +55,7 @@ import { useFinanceStore } from '@/stores/finance'
 import type { Operation } from '@/types'
 import { buildCategoryPickerGroups, getCategoryValue } from '@/utils/categories'
 import { createOperationDate, formatDateInput, getMonthKey, isValidMonthKey } from '@/utils/date'
+import { waitForMinimumDuration } from '@/utils/delay'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -110,6 +110,7 @@ async function submitOperation() {
     return
   }
 
+  const loaderStartedAt = Date.now()
   isSubmitting.value = true
 
   try {
@@ -128,6 +129,7 @@ async function submitOperation() {
         categoryID: selectedCategory.value.categoryID,
         subcategoryID: selectedCategory.value.subcategoryID,
       })
+      await waitForMinimumDuration(loaderStartedAt)
       resetForm()
       await goBack(getMonthKey(operationDate))
       return
@@ -148,12 +150,14 @@ async function submitOperation() {
       isActive: true,
     })
 
+    await waitForMinimumDuration(loaderStartedAt)
     resetForm()
     await goBack(getMonthKey(new Date(operation.date)))
   } catch (err) {
     // formError.value = 'Не удалось сохранить запись. Попробуйте еще раз.'
     formError.value = `${err }`
   } finally {
+    await waitForMinimumDuration(loaderStartedAt)
     isSubmitting.value = false
   }
 }

@@ -1,10 +1,9 @@
 <template>
-  <section class="operations-page">
+  <section class="operations-page" :aria-busy="isDeleting">
     <header class="operations-page__header">
       <button class="back-button" type="button" @click="goHome">Назад</button>
       <div>
-        <p class="eyebrow">Детальный просмотр</p>
-        <h1>Операции</h1>
+        <h3>Операции</h3>
       </div>
     </header>
 
@@ -39,6 +38,11 @@
         Показать ещё {{ nextOperationGroupsCount }} из {{ hiddenOperationGroupsCount }}
       </button>
     </section>
+
+    <div v-if="isDeleting" class="page-loader" role="status" aria-live="polite">
+      <span class="page-loader__spinner" aria-hidden="true"></span>
+      <p>Удаляем запись…</p>
+    </div>
   </section>
 </template>
 
@@ -50,6 +54,7 @@ import PeriodSwitch from '@/components/PeriodSwitch.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation, OperationTypeFilter, OperationsPeriod } from '@/types'
 import { getMonthKey, isValidMonthKey } from '@/utils/date'
+import { waitForMinimumDuration } from '@/utils/delay'
 import { buildOperationPeriodGroups, sortOperationsByDateDesc } from '@/utils/operations'
 
 const store = useFinanceStore()
@@ -62,6 +67,7 @@ const operationGroupPageSizes: Record<OperationsPeriod, number> = {
   year: 12,
 }
 const visibleOperationGroupsCount = ref(operationGroupPageSizes.day)
+const isDeleting = ref(false)
 
 const selectedMonthKey = computed(() => {
   const month = typeof route.query.month === 'string' ? route.query.month : null
@@ -153,7 +159,19 @@ function openEditPage(operation: Operation) {
 }
 
 async function removeOperation(operation: Operation) {
-  await store.deleteOperation(operation.id)
+  if (isDeleting.value) {
+    return
+  }
+
+  const loaderStartedAt = Date.now()
+  isDeleting.value = true
+
+  try {
+    await store.deleteOperation(operation.id)
+  } finally {
+    await waitForMinimumDuration(loaderStartedAt)
+    isDeleting.value = false
+  }
 }
 
 function isOperationsPeriod(value: string | null): value is OperationsPeriod {
