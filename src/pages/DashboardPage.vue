@@ -63,7 +63,7 @@
       <article class="panel">
         <div class="panel__header">
           <div>
-            <h2>Последние операции</h2>
+            <h3>Последние операции</h3>
             <span>{{ recentOperations.length }}</span>
           </div>
           <button class="panel-link-button" type="button" @click="openOperationsPage">Все операции</button>

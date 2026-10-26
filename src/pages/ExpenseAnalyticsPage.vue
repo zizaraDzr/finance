@@ -9,8 +9,7 @@
         </button>
 
         <div>
-          <p class="eyebrow">Аналитика расходов</p>
-          <h1>{{ selectedPeriodTitle }}</h1>
+          <h3>{{ selectedPeriodTitle }}</h3>
         </div>
 
         <button v-if="hasNextPeriod" class="month-nav-button" type="button" :aria-label="nextPeriodLabel"
