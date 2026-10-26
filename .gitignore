@@ -43,3 +43,12 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 default.json
+
+# TLS и приватные ключи: генерируются локально, в репозиторий не попадают
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+selfsigned.*
+certs/

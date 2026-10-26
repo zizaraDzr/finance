@@ -8,9 +8,11 @@ import process from 'node:process'
 const rootDir = process.cwd()
 loadEnvFile(path.join(rootDir, '.env'))
 loadEnvFile(path.join(rootDir, '.env.local'))
+const tlsKeyPath = path.resolve(rootDir, process.env.TLS_KEY_PATH || 'selfsigned.key')
+const tlsCertPath = path.resolve(rootDir, process.env.TLS_CERT_PATH || 'selfsigned.crt')
 const options = {
-  key: readFileSync('selfsigned.key'),
-  cert: readFileSync('selfsigned.crt')
+  key: readTlsFile(tlsKeyPath, 'TLS_KEY_PATH'),
+  cert: readTlsFile(tlsCertPath, 'TLS_CERT_PATH'),
 }
 
 const port = Number(process.env.PORT || 4173)
@@ -38,7 +40,7 @@ const server = createServer(options, async (request, response) => {
 })
 
 server.listen(port, () => {
-  console.log(`Budget server is running at http://localhost:${port}`)
+  console.log(`Budget server is running at https://localhost:${port}`)
   console.log(`Finance data file: ${financeDataFile}`)
 
   if (!syncToken) {
@@ -226,6 +228,21 @@ function sendJson(response, status, payload) {
     'Content-Type': 'application/json; charset=utf-8',
   })
   response.end(JSON.stringify(payload))
+}
+
+function readTlsFile(filePath, envName) {
+  try {
+    return readFileSync(filePath)
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      console.error(`TLS file not found: ${filePath}`)
+      console.error('Сгенерируйте локальный сертификат командой: pnpm certs')
+      console.error(`Либо укажите свой путь в переменной ${envName}.`)
+      process.exit(1)
+    }
+
+    throw error
+  }
 }
 
 function loadEnvFile(filePath) {
