@@ -1,6 +1,5 @@
 import type {
   AnalyticsGranularity,
-  AnalyticsWindow,
   ExpensePeriod,
   OperationsPeriod,
   OperationTypeFilter,
@@ -40,10 +39,4 @@ export function readExpensePeriod(value: unknown): ExpensePeriod {
 
 export function readAnalyticsGranularity(value: unknown): AnalyticsGranularity {
   return readString(value) === 'year' ? 'year' : 'month'
-}
-
-export function readAnalyticsWindow(value: unknown): AnalyticsWindow {
-  const years = Number(readString(value))
-
-  return years === 1 || years === 2 || years === 3 ? years : 'all'
 }

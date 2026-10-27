@@ -1,4 +1,4 @@
-import type { AnalyticsGranularity, AnalyticsWindow, Operation } from '@/types'
+import type { AnalyticsGranularity, Operation } from '@/types'
 import { getMonthKey, isValidDate, shiftMonthKey } from '@/utils/date'
 import type { OperationNames } from '@/utils/operations'
 
@@ -13,11 +13,6 @@ export type CategorySeries = {
   buckets: string[]
   amounts: number[]
   subcategories: SubcategorySeries[]
-}
-
-export type CategorySeriesOptions = {
-  granularity: AnalyticsGranularity
-  window: AnalyticsWindow
 }
 
 export type AmountsSummary = {
@@ -46,24 +41,6 @@ function getPercentChange(current: number, previous: number) {
 
 function getBucket(monthKey: string, granularity: AnalyticsGranularity) {
   return granularity === 'year' ? monthKey.slice(0, 4) : monthKey
-}
-
-function getStartBucket(
-  granularity: AnalyticsGranularity,
-  window: AnalyticsWindow,
-  firstBucket: string,
-  lastBucket: string,
-) {
-  if (window === 'all') {
-    return firstBucket
-  }
-
-  const windowStart =
-    granularity === 'year'
-      ? String(Number(lastBucket) - (window - 1))
-      : shiftMonthKey(lastBucket, -(window * 12 - 1))
-
-  return windowStart > firstBucket ? windowStart : firstBucket
 }
 
 function shiftBucket(bucket: string, granularity: AnalyticsGranularity) {
@@ -99,16 +76,14 @@ export function summarizeAmounts(amounts: number[]): AmountsSummary {
 }
 
 /**
- * Amounts of one category per month or per year, from the first bucket of the
- * range to its last bucket, plus the same amounts for every subcategory.
- * The range ends on the last bucket with data and never starts before the first
- * one, so the window only ever trims the history on the left.
+ * Amounts of one category per month or per year, from the first bucket with data
+ * to the last one, plus the same amounts for every subcategory.
  */
 export function buildCategorySeries(
   operations: Operation[],
   categoryKey: string,
   names: OperationNames,
-  options: CategorySeriesOptions,
+  granularity: AnalyticsGranularity,
 ): CategorySeries {
   const bucketTotals = new Map<string, number>()
   const subcategories = new Map<
@@ -123,7 +98,7 @@ export function buildCategorySeries(
       return
     }
 
-    const bucket = getBucket(getMonthKey(date), options.granularity)
+    const bucket = getBucket(getMonthKey(date), granularity)
     const subcategoryKey = operation.subcategoryID || `${categoryKey}:without-subcategory`
     let subcategory = subcategories.get(subcategoryKey)
 
@@ -150,11 +125,7 @@ export function buildCategorySeries(
     return { buckets: [], amounts: [], subcategories: [] }
   }
 
-  const buckets = buildBucketRange(
-    options.granularity,
-    getStartBucket(options.granularity, options.window, firstBucket, lastBucket),
-    lastBucket,
-  )
+  const buckets = buildBucketRange(granularity, firstBucket, lastBucket)
 
   return {
     buckets,

@@ -3,7 +3,6 @@ import {
   formatChangeHint,
   formatDate,
   formatMoney,
-  formatMonthShortTitle,
   formatMonthTitle,
   formatOperationsCount,
   formatPercent,
@@ -64,13 +63,6 @@ describe('formatSignedPercent', () => {
     expect(formatSignedPercent(-5)).toBe('−5%')
     expect(formatSignedPercent(0)).toBe('0%')
     expect(formatSignedPercent(null)).toBe('—')
-  })
-})
-
-describe('formatMonthShortTitle', () => {
-  it('builds a compact month label with a two-digit year', () => {
-    expect(formatMonthShortTitle('2026-10')).toBe('Окт 26')
-    expect(formatMonthShortTitle('2026-05')).toBe('Май 26')
   })
 })
 

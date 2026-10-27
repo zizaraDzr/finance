@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { buildCategorySeries, summarizeAmounts } from '@/utils/analytics'
-import type { CategorySeriesOptions } from '@/utils/analytics'
 import { createOperation, createSubcategory } from '@/test/fixtures'
 
 const dairy = createSubcategory({ id: 'sub-dairy', name: 'Молочные', categoryID: 'cat-food' })
@@ -17,9 +16,6 @@ const names = {
   },
 }
 
-const byMonth: CategorySeriesOptions = { granularity: 'month', window: 'all' }
-const byYear: CategorySeriesOptions = { granularity: 'year', window: 'all' }
-
 function foodOperation(overrides: Parameters<typeof createOperation>[0]) {
   return createOperation({ categoryID: 'cat-food', type: 1, ...overrides })
 }
@@ -33,7 +29,7 @@ describe('buildCategorySeries', () => {
       ],
       'cat-food',
       names,
-      byMonth,
+      'month',
     )
 
     expect(series.buckets).toEqual(['2026-01', '2026-02', '2026-03'])
@@ -54,7 +50,7 @@ describe('buildCategorySeries', () => {
       ],
       'cat-food',
       names,
-      byMonth,
+      'month',
     )
 
     expect(series.buckets).toEqual(['2026-01'])
@@ -86,7 +82,7 @@ describe('buildCategorySeries', () => {
       ],
       'cat-food',
       names,
-      byMonth,
+      'month',
     )
 
     expect(series.buckets).toEqual(['2026-01', '2026-02'])
@@ -107,90 +103,15 @@ describe('buildCategorySeries', () => {
       ],
       'cat-food',
       names,
-      byYear,
+      'year',
     )
 
     expect(series.buckets).toEqual(['2024', '2025', '2026'])
     expect(series.amounts).toEqual([100, 200, 350])
   })
 
-  it('cuts the month range down to the requested number of years', () => {
-    const series = buildCategorySeries(
-      [
-        foodOperation({ id: 'op-2024', sum: 100, date: '2024-01-10T12:00:00.000Z' }),
-        foodOperation({ id: 'op-jun', sum: 200, date: '2025-06-10T12:00:00.000Z' }),
-        foodOperation({ id: 'op-mar', sum: 300, date: '2026-03-10T12:00:00.000Z' }),
-      ],
-      'cat-food',
-      names,
-      { granularity: 'month', window: 1 },
-    )
-
-    expect(series.buckets).toHaveLength(12)
-    expect(series.buckets[0]).toBe('2025-04')
-    expect(series.buckets.at(-1)).toBe('2026-03')
-    expect(series.amounts[2]).toBe(200)
-    expect(series.amounts.at(-1)).toBe(300)
-    expect(series.amounts.reduce((sum, amount) => sum + amount, 0)).toBe(500)
-  })
-
-  it('never starts the range before the first operation of the category', () => {
-    const series = buildCategorySeries(
-      [
-        foodOperation({ id: 'op-jan', sum: 100, date: '2026-01-10T12:00:00.000Z' }),
-        foodOperation({ id: 'op-mar', sum: 300, date: '2026-03-10T12:00:00.000Z' }),
-      ],
-      'cat-food',
-      names,
-      { granularity: 'month', window: 3 },
-    )
-
-    expect(series.buckets).toEqual(['2026-01', '2026-02', '2026-03'])
-  })
-
-  it('cuts the year range down to the requested number of years', () => {
-    const series = buildCategorySeries(
-      [
-        foodOperation({ id: 'op-2024', sum: 100, date: '2024-05-10T12:00:00.000Z' }),
-        foodOperation({ id: 'op-2025', sum: 200, date: '2025-02-10T12:00:00.000Z' }),
-        foodOperation({ id: 'op-2026', sum: 300, date: '2026-03-10T12:00:00.000Z' }),
-      ],
-      'cat-food',
-      names,
-      { granularity: 'year', window: 2 },
-    )
-
-    expect(series.buckets).toEqual(['2025', '2026'])
-    expect(series.amounts).toEqual([200, 300])
-  })
-
-  it('drops subcategories that spent nothing inside the selected period', () => {
-    const series = buildCategorySeries(
-      [
-        foodOperation({
-          id: 'op-dairy-old',
-          subcategoryID: dairy.id,
-          sum: 100,
-          date: '2020-01-10T12:00:00.000Z',
-        }),
-        foodOperation({
-          id: 'op-bakery-now',
-          subcategoryID: bakery.id,
-          sum: 300,
-          date: '2026-03-10T12:00:00.000Z',
-        }),
-      ],
-      'cat-food',
-      names,
-      { granularity: 'month', window: 1 },
-    )
-
-    expect(series.subcategories).toHaveLength(1)
-    expect(series.subcategories[0]?.name).toBe('Хлебное')
-  })
-
   it('returns an empty series when the category has no operations', () => {
-    expect(buildCategorySeries([], 'cat-food', names, byMonth)).toEqual({
+    expect(buildCategorySeries([], 'cat-food', names, 'month')).toEqual({
       buckets: [],
       amounts: [],
       subcategories: [],

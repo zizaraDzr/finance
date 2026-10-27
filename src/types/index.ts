@@ -70,7 +70,6 @@ export type OperationsPeriod = 'day' | 'week' | 'month' | 'year'
 export type OperationTypeFilter = 'income' | 'expense'
 export type ExpensePeriod = 'month' | 'year'
 export type AnalyticsGranularity = 'month' | 'year'
-export type AnalyticsWindow = 1 | 2 | 3 | 'all'
 
 export interface PeriodOption {
   value: OperationsPeriod

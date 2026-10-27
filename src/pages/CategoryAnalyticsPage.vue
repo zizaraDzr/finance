@@ -41,52 +41,36 @@
             {{ option.label }}
           </button>
         </fieldset>
-
-        <fieldset class="period-switch category-analytics__window">
-          <legend>Период</legend>
-          <button
-            v-for="option in windowOptions"
-            :key="option.value"
-            type="button"
-            :aria-pressed="option.value === selectedWindow"
-            :class="{ 'period-switch__button--active': option.value === selectedWindow }"
-            @click="selectWindow(option.value)"
-          >
-            {{ option.label }}
-          </button>
-        </fieldset>
       </section>
 
-      <section class="analytics-grid">
-        <article class="panel analytics-summary">
-          <div class="panel__header">
-            <div>
-              <h2>{{ selectedCategoryName }}</h2>
-              <span>{{ summaryCaption }}</span>
-            </div>
-            <strong class="amount--expense">{{ formatMoney(summary.total, store.currencySymbol) }}</strong>
+      <article class="panel analytics-summary">
+        <div class="panel__header">
+          <div>
+            <h2>{{ selectedCategoryName }}</h2>
+            <span>Расход за всё время</span>
+          </div>
+          <strong class="amount--expense">{{ formatMoney(summary.total, store.currencySymbol) }}</strong>
+        </div>
+
+        <div class="analytics-summary__stats">
+          <div class="analytics-summary__stat">
+            <span>{{ averageCaption }}</span>
+            <strong>{{ formatMoney(summary.average, store.currencySymbol) }}</strong>
           </div>
 
-          <div class="comparison">
-            <div>
-              <span>{{ averageCaption }}</span>
-              <strong>{{ formatMoney(summary.average, store.currencySymbol) }}</strong>
-            </div>
-            <div>
-              <span>{{ lastBucketTitle }}</span>
-              <strong>{{ formatMoney(summary.lastAmount, store.currencySymbol) }}</strong>
-            </div>
-            <div>
-              <span>{{ changeCaption }}</span>
-              <strong class="analytics-change" :class="getChangeClass(summary.percentChange)">
-                {{ formatChangeHint(summary.change, summary.percentChange, store.currencySymbol) }}
-              </strong>
-            </div>
+          <div class="analytics-summary__stat">
+            <span>{{ lastBucketTitle }}</span>
+            <strong>{{ formatMoney(summary.lastAmount, store.currencySymbol) }}</strong>
           </div>
-        </article>
 
-        <CategoryTrendChart :points="trendPoints" :average="summary.average" :title="chartTitle" />
-      </section>
+          <div class="analytics-summary__stat">
+            <span>{{ changeCaption }}</span>
+            <strong class="analytics-change" :class="getChangeClass(summary.percentChange)">
+              {{ formatChangeHint(summary.change, summary.percentChange, store.currencySymbol) }}
+            </strong>
+          </div>
+        </div>
+      </article>
 
       <article v-if="hasSubcategories" class="panel analytics-panel category-analytics__breakdown">
         <div class="panel__header">
@@ -135,26 +119,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CategoryTrendChart from '@/components/CategoryTrendChart.vue'
 import { useFinanceStore } from '@/stores/finance'
-import type { AnalyticsGranularity, AnalyticsWindow } from '@/types'
+import type { AnalyticsGranularity } from '@/types'
 import { buildCategorySeries, summarizeAmounts } from '@/utils/analytics'
 import type { CategorySeries } from '@/utils/analytics'
 import { isValidDate } from '@/utils/date'
 import {
   formatChangeHint,
   formatMoney,
-  formatMonthShortTitle,
   formatMonthTitle,
   formatPercent,
   formatSubcategoryCount,
 } from '@/utils/formatters'
 import { buildCategoryBreakdown } from '@/utils/operations'
-import {
-  readAnalyticsGranularity,
-  readAnalyticsWindow,
-  readOptionalMonthQuery,
-} from '@/utils/routeQuery'
+import { readAnalyticsGranularity, readOptionalMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -164,16 +142,9 @@ const granularityOptions: Array<{ value: AnalyticsGranularity; label: string }> 
   { value: 'month', label: 'Месяц' },
   { value: 'year', label: 'Год' },
 ]
-const windowOptions: Array<{ value: AnalyticsWindow; label: string }> = [
-  { value: 1, label: '1 год' },
-  { value: 2, label: '2 года' },
-  { value: 3, label: '3 года' },
-  { value: 'all', label: 'Всё время' },
-]
 
 const returnMonth = computed(() => readOptionalMonthQuery(route.query.month))
 const granularity = computed(() => readAnalyticsGranularity(route.query.granularity))
-const selectedWindow = computed(() => readAnalyticsWindow(route.query.window))
 const isYearly = computed(() => granularity.value === 'year')
 const names = {
   getCategoryName: store.getCategoryName,
@@ -205,18 +176,14 @@ const series = computed<CategorySeries>(() => {
     return { buckets: [], amounts: [], subcategories: [] }
   }
 
-  return buildCategorySeries(expenseOperations.value, selectedCategoryKey.value, names, {
-    granularity: granularity.value,
-    window: selectedWindow.value,
-  })
+  return buildCategorySeries(
+    expenseOperations.value,
+    selectedCategoryKey.value,
+    names,
+    granularity.value,
+  )
 })
 const summary = computed(() => summarizeAmounts(series.value.amounts))
-const trendPoints = computed(() =>
-  series.value.buckets.map((bucket, index) => ({
-    label: isYearly.value ? bucket : formatMonthShortTitle(bucket),
-    amount: series.value.amounts[index] ?? 0,
-  })),
-)
 const lastBucketTitle = computed(() => {
   const bucket = series.value.buckets.at(-1)
 
@@ -228,15 +195,9 @@ const lastBucketTitle = computed(() => {
 })
 const bucketWord = computed(() => (isYearly.value ? 'год' : 'месяц'))
 const previousWord = computed(() => (isYearly.value ? 'году' : 'месяцу'))
-const chartTitle = computed(() => (isYearly.value ? 'Расход по годам' : 'Расход по месяцам'))
 const averageCaption = computed(() => `В среднем в ${bucketWord.value}`)
 const changeCaption = computed(() => `К предыдущему ${previousWord.value}`)
 const previousHint = computed(() => `к предыдущему ${previousWord.value}`)
-const summaryCaption = computed(() => {
-  const label = windowOptions.find(option => option.value === selectedWindow.value)?.label ?? ''
-
-  return `Расход за ${label.toLowerCase()}`
-})
 const subcategoryRows = computed(() =>
   series.value.subcategories
     .filter(subcategory => isSubcategoryVisible(subcategory.subcategoryID))
@@ -256,9 +217,7 @@ const subcategoryRows = computed(() =>
       }
     }),
 )
-const hasSubcategories = computed(() =>
-  subcategoryRows.value.some(row => row.isSubcategory),
-)
+const hasSubcategories = computed(() => subcategoryRows.value.some(row => row.isSubcategory))
 
 function isCategoryVisible(categoryID: string | null) {
   return Boolean(categoryID) && !store.getCategory(categoryID)?.isDeleted
@@ -276,10 +235,14 @@ function getChangeClass(percentChange: number | null) {
   return percentChange > 0 ? 'analytics-change--up' : 'analytics-change--down'
 }
 
-function updateQuery(changes: Record<string, string>) {
+function navigate(changes: { category?: string; granularity?: AnalyticsGranularity }) {
   router.push({
     name: 'category-analytics',
-    query: { ...route.query, ...changes },
+    query: {
+      ...(returnMonth.value ? { month: returnMonth.value } : {}),
+      category: changes.category ?? selectedCategoryKey.value ?? '',
+      granularity: changes.granularity ?? granularity.value,
+    },
   })
 }
 
@@ -291,14 +254,10 @@ function goHome() {
 }
 
 function selectCategory(categoryKey: string) {
-  updateQuery({ category: categoryKey })
+  navigate({ category: categoryKey })
 }
 
 function selectGranularity(value: AnalyticsGranularity) {
-  updateQuery({ granularity: value })
-}
-
-function selectWindow(value: AnalyticsWindow) {
-  updateQuery({ window: String(value) })
+  navigate({ granularity: value })
 }
 </script>

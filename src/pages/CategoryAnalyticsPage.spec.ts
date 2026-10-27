@@ -85,7 +85,7 @@ describe('CategoryAnalyticsPage', () => {
     expect(wrapper.find('.analytics-summary').text()).toContain('500')
   })
 
-  it('shows the whole-period total, the monthly average and the change to the previous month', async () => {
+  it('shows the total, the monthly average and the change to the previous month', async () => {
     const { wrapper } = await mountPage(
       {
         Category: [food],
@@ -100,13 +100,10 @@ describe('CategoryAnalyticsPage', () => {
 
     const summary = wrapper.find('.analytics-summary')
     expect(summary.text()).toContain('600')
-    expect(summary.text()).toContain('200')
     expect(summary.text()).toContain('В среднем в месяц')
     expect(summary.text()).toContain('К предыдущему месяцу')
+    expect(summary.text()).toContain('Март 2026')
     expect(normalizeSpaces(summary.find('.analytics-change').text())).toBe('+50% (+100 ₽)')
-
-    expect(wrapper.findAll('.category-trend-chart__bar')).toHaveLength(3)
-    expect(wrapper.find('.analytics-chart').text()).toContain('Янв 26')
   })
 
   it('switches the analysed category from the picker and keeps it in the URL', async () => {
@@ -235,7 +232,7 @@ describe('CategoryAnalyticsPage', () => {
     expect(wrapper.text()).not.toContain('Старое')
   })
 
-  it('groups the chart by years when the year granularity is chosen', async () => {
+  it('groups the numbers by years when the year grouping is chosen', async () => {
     const { wrapper, router } = await mountPage(
       {
         Category: [food],
@@ -250,35 +247,14 @@ describe('CategoryAnalyticsPage', () => {
     await clickOption(wrapper, '.category-analytics__granularity', 'Год')
 
     expect(router.currentRoute.value.query.granularity).toBe('year')
-    expect(wrapper.findAll('.category-trend-chart__bar')).toHaveLength(2)
-    expect(wrapper.find('.analytics-chart').text()).toContain('2025')
-    expect(wrapper.find('.analytics-chart').text()).toContain('2026')
-    expect(wrapper.find('.analytics-summary').text()).toContain('В среднем в год')
-    expect(wrapper.find('.analytics-summary').text()).toContain('К предыдущему году')
+    const summary = wrapper.find('.analytics-summary')
+    expect(summary.text()).toContain('В среднем в год')
+    expect(summary.text()).toContain('К предыдущему году')
+    expect(summary.text()).toContain('2026')
     expect(normalizeSpaces(wrapper.find('.analytics-change').text())).toBe('+200% (+200 ₽)')
   })
 
-  it('cuts the chart down to the chosen number of years', async () => {
-    const { wrapper, router } = await mountPage(
-      {
-        Category: [food],
-        Operation: [
-          foodOperation({ id: 'op-2024', sum: 100, date: '2024-01-10T12:00:00.000Z' }),
-          foodOperation({ id: 'op-2026', sum: 300, date: '2026-01-10T12:00:00.000Z' }),
-        ],
-      },
-      '/category-analytics?month=2026-03&category=cat-food',
-    )
-
-    expect(wrapper.findAll('.category-trend-chart__bar')).toHaveLength(25)
-
-    await clickOption(wrapper, '.category-analytics__window', '1 год')
-
-    expect(router.currentRoute.value.query.window).toBe('1')
-    expect(wrapper.findAll('.category-trend-chart__bar')).toHaveLength(12)
-  })
-
-  it('keeps the granularity and the window when another category is picked', async () => {
+  it('keeps the grouping when another category is picked', async () => {
     const { wrapper, router } = await mountPage(
       {
         Category: [food, gifts],
@@ -292,7 +268,7 @@ describe('CategoryAnalyticsPage', () => {
           }),
         ],
       },
-      '/category-analytics?month=2026-03&category=cat-gifts&granularity=year&window=2',
+      '/category-analytics?month=2026-03&category=cat-gifts&granularity=year',
     )
 
     await clickOption(wrapper, '.category-analytics__picker', 'Продукты')
@@ -300,8 +276,27 @@ describe('CategoryAnalyticsPage', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       category: 'cat-food',
       granularity: 'year',
-      window: '2',
     })
+  })
+
+  it('ignores the period of an old link and drops it from the query', async () => {
+    const { wrapper, router } = await mountPage(
+      {
+        Category: [food],
+        Operation: [
+          foodOperation({ id: 'op-2024', sum: 100, date: '2024-01-10T12:00:00.000Z' }),
+          foodOperation({ id: 'op-2026', sum: 300, date: '2026-01-10T12:00:00.000Z' }),
+        ],
+      },
+      '/category-analytics?month=2026-03&category=cat-food&window=1',
+    )
+
+    expect(wrapper.find('.analytics-summary').text()).toContain('400')
+
+    await clickOption(wrapper, '.category-analytics__granularity', 'Год')
+
+    expect(router.currentRoute.value.query.window).toBeUndefined()
+    expect(router.currentRoute.value.query.granularity).toBe('year')
   })
 
   it('shows an empty state when there are no expenses yet', async () => {
