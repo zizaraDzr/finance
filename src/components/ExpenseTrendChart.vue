@@ -44,10 +44,6 @@
             {{ label.label }}
           </text>
         </g>
-        <!-- Существующая линия today -->
-        <line v-if="currentMarkerX !== null" class="trend-chart__today" :x1="currentMarkerX" :x2="currentMarkerX"
-          :y1="chartPlotTop" :y2="chartHeight - chartPlotBottom" />
-
         <!-- ТОЧКИ на пересечении с today -->
         <g v-if="currentMarkerX !== null && todayValues">
           <!-- Точка на текущей линии -->
@@ -78,10 +74,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
+import type { ExpensePeriod } from '@/types'
 import { getMonthKey, isValidDate, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatPercent } from '@/utils/formatters'
-
-type ExpenseTrendPeriod = 'month' | 'year'
 
 type TrendPoint = {
   label: string
@@ -90,7 +85,7 @@ type TrendPoint = {
 
 const props = withDefaults(
   defineProps<{
-    period?: ExpenseTrendPeriod
+    period?: ExpensePeriod
     selectedMonthKey: string
   }>(),
   {

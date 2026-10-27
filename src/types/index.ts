@@ -68,6 +68,7 @@ export interface Target {
 
 export type OperationsPeriod = 'day' | 'week' | 'month' | 'year'
 export type OperationTypeFilter = 'income' | 'expense'
+export type ExpensePeriod = 'month' | 'year'
 
 export interface PeriodOption {
   value: OperationsPeriod

@@ -92,18 +92,6 @@ export async function readFinanceSnapshot() {
   }
 }
 
-export async function readFinanceData() {
-  const snapshot = await readFinanceSnapshot()
-  return snapshot?.data
-}
-
 export function writeFinanceSnapshot(snapshot: FinanceSnapshot) {
   return runStoreRequest<IDBValidKey>('readwrite', store => store.put(snapshot, DATA_KEY))
-}
-
-export function writeFinanceData(data: FinanceData) {
-  return writeFinanceSnapshot({
-    data,
-    updatedAt: new Date().toISOString(),
-  })
 }

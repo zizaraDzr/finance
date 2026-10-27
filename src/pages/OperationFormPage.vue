@@ -54,8 +54,9 @@ import CategoryPicker from '@/components/CategoryPicker.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation } from '@/types'
 import { buildCategoryPickerGroups, getCategoryValue } from '@/utils/categories'
-import { createOperationDate, formatDateInput, getMonthKey, isValidMonthKey } from '@/utils/date'
+import { createOperationDate, formatDateInput, getMonthKey } from '@/utils/date'
 import { waitForMinimumDuration } from '@/utils/delay'
+import { readMonthQuery, readOperationsPeriod, readOperationType } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -81,6 +82,7 @@ const categoryOptions = computed(() =>
   categoryGroups.value.flatMap(group => (group.subcategories.length ? group.subcategories : [group.option])),
 )
 const selectedCategory = computed(() => categoryOptions.value.find(option => option.value === form.value.categoryValue))
+const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 
 watch(
   editingOperation,
@@ -168,8 +170,8 @@ async function goBack(month = selectedMonthKey.value) {
       name: 'operations',
       query: {
         month,
-        period: typeof route.query.period === 'string' ? route.query.period : 'day',
-        type: typeof route.query.type === 'string' ? route.query.type : 'expense',
+        period: readOperationsPeriod(route.query.period),
+        type: readOperationType(route.query.type),
       },
     })
     return
@@ -210,10 +212,5 @@ function fillFormFromOperation(operation: Operation) {
 function clearFormError() {
   formError.value = ''
 }
-
-const selectedMonthKey = computed(() => {
-  const month = typeof route.query.month === 'string' ? route.query.month : null
-  return isValidMonthKey(month) ? month : store.currentMonthKey
-})
 
 </script>

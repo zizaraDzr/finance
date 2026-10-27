@@ -121,6 +121,7 @@
 import { computed, ref, watch } from 'vue'
 import OperationListItem from '@/components/OperationListItem.vue'
 import type { Operation, OperationPeriodGroup, OperationsPeriod, Subcategory } from '@/types'
+import { toggleSetMember } from '@/utils/collections'
 import { formatMoney, formatOperationDateTime, formatOperationTime, formatOperationsCount } from '@/utils/formatters'
 
 const props = defineProps<{
@@ -159,15 +160,7 @@ function showMoreDayOperations() {
 }
 
 function toggleAccordion(key: string) {
-  const nextOpenedAccordions = new Set(openedAccordions.value)
-
-  if (nextOpenedAccordions.has(key)) {
-    nextOpenedAccordions.delete(key)
-  } else {
-    nextOpenedAccordions.add(key)
-  }
-
-  openedAccordions.value = nextOpenedAccordions
+  openedAccordions.value = toggleSetMember(openedAccordions.value, key)
 }
 
 function isAccordionOpen(key: string) {

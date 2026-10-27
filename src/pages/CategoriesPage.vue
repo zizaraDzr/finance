@@ -218,8 +218,8 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import type { Category, Subcategory } from '@/types'
-import { isValidMonthKey } from '@/utils/date'
 import { formatOperationsCount } from '@/utils/formatters'
+import { readOptionalMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -236,10 +236,7 @@ const editingSubcategoryId = ref<string | null>(null)
 const editingSubcategoryName = ref('')
 const newCategoryId = ref<string | null>(null)
 
-const returnMonth = computed(() => {
-  const month = typeof route.query.month === 'string' ? route.query.month : null
-  return isValidMonthKey(month) ? month : null
-})
+const returnMonth = computed(() => readOptionalMonthQuery(route.query.month))
 
 const visibleCategories = computed(() =>
   store.categories

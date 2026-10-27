@@ -120,11 +120,12 @@ import { useRoute, useRouter } from 'vue-router'
 import ExpenseMonthlyHistogram from '@/components/ExpenseMonthlyHistogram.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import { useFinanceStore } from '@/stores/finance'
-import type { Operation } from '@/types'
-import { getMonthKey, isValidDate, isValidMonthKey, shiftMonthKey } from '@/utils/date'
+import type { ExpensePeriod, Operation } from '@/types'
+import { toggleSetMember } from '@/utils/collections'
+import { getMonthKey, isValidDate, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatOperationsCount, formatPercent } from '@/utils/formatters'
-
-type ExpenseAnalyticsPeriod = 'month' | 'year'
+import { buildCategoryBreakdown } from '@/utils/operations'
+import { readExpensePeriod, readMonthQuery } from '@/utils/routeQuery'
 
 type ExpenseSubcategoryGroup = {
   key: string
@@ -145,15 +146,12 @@ const openedCategories = ref(new Set<string>())
 const expenseGroupsPreviewCount = 3
 const isAllExpenseGroupsVisible = ref(false)
 
-const analyticsPeriodOptions: Array<{ value: ExpenseAnalyticsPeriod; label: string }> = [
+const analyticsPeriodOptions: Array<{ value: ExpensePeriod; label: string }> = [
   { value: 'month', label: 'Месяц' },
   { value: 'year', label: 'Год' },
 ]
 
-const selectedMonthKey = computed(() => {
-  const month = typeof route.query.month === 'string' ? route.query.month : null
-  return isValidMonthKey(month) ? month : store.currentMonthKey
-})
+const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
 const nextMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, 1))
 const selectedYear = computed(() => Number(selectedMonthKey.value.slice(0, 4)))
@@ -161,10 +159,7 @@ const selectedMonthNumber = computed(() => Number(selectedMonthKey.value.slice(5
 const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
 const currentMonthNumber = computed(() => Number(store.currentMonthKey.slice(5, 7)))
 const selectedMonthTitle = computed(() => formatMonthTitle(selectedMonthKey.value))
-const analyticsPeriod = computed<ExpenseAnalyticsPeriod>(() => {
-  const period = typeof route.query.expensePeriod === 'string' ? route.query.expensePeriod : null
-  return period === 'year' ? 'year' : 'month'
-})
+const analyticsPeriod = computed<ExpensePeriod>(() => readExpensePeriod(route.query.expensePeriod))
 const selectedPeriodTitle = computed(() =>
   analyticsPeriod.value === 'year' ? String(selectedYear.value) : selectedMonthTitle.value,
 )
@@ -266,7 +261,7 @@ function openMonthAnalytics(month: string) {
   })
 }
 
-function setAnalyticsPeriod(period: ExpenseAnalyticsPeriod) {
+function setAnalyticsPeriod(period: ExpensePeriod) {
   router.push({
     name: 'expense-analytics',
     query: {
@@ -277,15 +272,7 @@ function setAnalyticsPeriod(period: ExpenseAnalyticsPeriod) {
 }
 
 function toggleCategory(key: string) {
-  const nextOpenedCategories = new Set(openedCategories.value)
-
-  if (nextOpenedCategories.has(key)) {
-    nextOpenedCategories.delete(key)
-  } else {
-    nextOpenedCategories.add(key)
-  }
-
-  openedCategories.value = nextOpenedCategories
+  openedCategories.value = toggleSetMember(openedCategories.value, key)
 }
 
 function isCategoryOpen(key: string) {
@@ -300,64 +287,28 @@ function createMonthKey(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
-function buildExpenseGroups(operations: Operation[], total: number) {
-  const categories = new Map<string, ExpenseCategoryGroup>()
-
-  operations.forEach(operation => {
-    const categoryKey = operation.categoryID || 'without-category'
-    const subcategoryKey = operation.subcategoryID || `${categoryKey}:without-subcategory`
-    const category = categories.get(categoryKey) || {
-      key: categoryKey,
-      name: store.getCategoryName(operation.categoryID),
-      amount: 0,
-      count: 0,
-      percent: 0,
-      subcategories: [],
-    }
-    const subcategory =
-      category.subcategories.find(item => item.key === subcategoryKey) ||
-      createExpenseSubcategory(subcategoryKey, operation, category.name)
-
-    category.amount += operation.sum
-    category.count += 1
-    subcategory.amount += operation.sum
-    subcategory.count += 1
-
-    if (!category.subcategories.some(item => item.key === subcategory.key)) {
-      category.subcategories.push(subcategory)
-    }
-
-    categories.set(categoryKey, category)
+function buildExpenseGroups(operations: Operation[], total: number): ExpenseCategoryGroup[] {
+  return buildCategoryBreakdown(operations, {
+    getCategoryName: store.getCategoryName,
+    getSubcategory: store.getSubcategory,
   })
-
-  return Array.from(categories.values())
     .map(category => ({
-      ...category,
-      percent: getSharePercent(category.amount, total),
+      key: category.key,
+      name: category.name,
+      amount: category.expense,
+      count: category.count,
+      percent: getSharePercent(category.expense, total),
       subcategories: category.subcategories
         .map(subcategory => ({
-          ...subcategory,
-          percent: getSharePercent(subcategory.amount, total),
+          key: subcategory.key,
+          name: subcategory.name,
+          amount: subcategory.expense,
+          count: subcategory.count,
+          percent: getSharePercent(subcategory.expense, total),
         }))
         .sort((first, second) => second.amount - first.amount),
     }))
     .sort((first, second) => second.amount - first.amount)
-}
-
-function createExpenseSubcategory(
-  key: string,
-  operation: Operation,
-  categoryName: string,
-): ExpenseSubcategoryGroup {
-  return {
-    key,
-    name: operation.subcategoryID
-      ? store.getSubcategory(operation.subcategoryID)?.name || categoryName
-      : categoryName,
-    amount: 0,
-    count: 0,
-    percent: 0,
-  }
 }
 
 function getSharePercent(amount: number, total: number) {

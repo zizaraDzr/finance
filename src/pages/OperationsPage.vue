@@ -53,9 +53,10 @@ import OperationPeriodGroup from '@/components/OperationPeriodGroup.vue'
 import PeriodSwitch from '@/components/PeriodSwitch.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation, OperationTypeFilter, OperationsPeriod } from '@/types'
-import { getMonthKey, isValidMonthKey } from '@/utils/date'
+import { getMonthKey } from '@/utils/date'
 import { waitForMinimumDuration } from '@/utils/delay'
 import { buildOperationPeriodGroups, sortOperationsByDateDesc } from '@/utils/operations'
+import { readMonthQuery, readOperationsPeriod, readOperationType } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -69,18 +70,9 @@ const operationGroupPageSizes: Record<OperationsPeriod, number> = {
 const visibleOperationGroupsCount = ref(operationGroupPageSizes.day)
 const isDeleting = ref(false)
 
-const selectedMonthKey = computed(() => {
-  const month = typeof route.query.month === 'string' ? route.query.month : null
-  return isValidMonthKey(month) ? month : store.currentMonthKey
-})
-const operationsPeriod = computed<OperationsPeriod>(() => {
-  const period = typeof route.query.period === 'string' ? route.query.period : null
-  return isOperationsPeriod(period) ? period : 'day'
-})
-const operationType = computed<OperationTypeFilter>(() => {
-  const type = typeof route.query.type === 'string' ? route.query.type : null
-  return isOperationTypeFilter(type) ? type : 'expense'
-})
+const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
+const operationsPeriod = computed<OperationsPeriod>(() => readOperationsPeriod(route.query.period))
+const operationType = computed<OperationTypeFilter>(() => readOperationType(route.query.type))
 const sortedOperations = computed(() => sortOperationsByDateDesc(store.activeOperations))
 const filteredOperations = computed(() =>
   sortedOperations.value.filter(operation => operation.type === getOperationNumericType(operationType.value)),
@@ -172,14 +164,6 @@ async function removeOperation(operation: Operation) {
     await waitForMinimumDuration(loaderStartedAt)
     isDeleting.value = false
   }
-}
-
-function isOperationsPeriod(value: string | null): value is OperationsPeriod {
-  return value === 'day' || value === 'week' || value === 'month' || value === 'year'
-}
-
-function isOperationTypeFilter(value: string | null): value is OperationTypeFilter {
-  return value === 'income' || value === 'expense'
 }
 
 function getOperationNumericType(type: OperationTypeFilter) {

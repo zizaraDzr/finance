@@ -10,7 +10,7 @@ import type {
 import { getOperationPeriodKey, isValidDate } from '@/utils/date'
 import { formatOperationPeriodSubtitle, formatOperationPeriodTitle } from '@/utils/formatters'
 
-type OperationNames = {
+export type OperationNames = {
   getCategoryName: (id: string | null) => string
   getSubcategory: (id: string | null) => Subcategory | null | undefined
 }
@@ -20,16 +20,6 @@ export function sortOperationsByDateDesc(operations: Operation[]) {
     .filter(operation => isValidDate(new Date(operation.date)))
     .slice()
     .sort((first, second) => getOperationTimestamp(second) - getOperationTimestamp(first))
-}
-
-export function summarizeOperations(operations: Operation[]) {
-  const summary = createEmptySummary()
-
-  operations.forEach(operation => {
-    applyOperationToSummary(summary, operation)
-  })
-
-  return summary
 }
 
 export function buildOperationPeriodGroups(operations: Operation[], period: OperationsPeriod, names: OperationNames) {
@@ -48,7 +38,7 @@ export function buildOperationPeriodGroups(operations: Operation[], period: Oper
   return Array.from(groups.values())
     .map(group => ({
       ...group,
-      categories: period === 'day' ? [] : buildCategoryGroups(group.operations, names),
+      categories: period === 'day' ? [] : buildCategoryBreakdown(group.operations, names),
     }))
     .sort((first, second) => second.key.localeCompare(first.key))
 }
@@ -84,7 +74,7 @@ function createOperationPeriodGroup(key: string, date: Date, period: OperationsP
   }
 }
 
-function buildCategoryGroups(operations: Operation[], names: OperationNames) {
+export function buildCategoryBreakdown(operations: Operation[], names: OperationNames) {
   const categoryMap = new Map<string, OperationCategoryGroup>()
 
   operations.forEach(operation => {

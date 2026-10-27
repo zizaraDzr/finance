@@ -1,7 +1,7 @@
 import type { OperationsPeriod } from '@/types'
 import { getEndOfWeek, getMonthKey, getStartOfWeek } from '@/utils/date'
 
-export function createMoneyFormatter(currencySymbol: string) {
+function createMoneyFormatter(currencySymbol: string) {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: currencySymbol === '$' ? 'USD' : 'RUB',
@@ -14,18 +14,19 @@ export function formatMoney(value: number, currencySymbol: string) {
   return createMoneyFormatter(currencySymbol).format(value)
 }
 
-export function formatOperationsCount(count: number) {
+function formatCount(count: number, forms: readonly [one: string, few: string, many: string]) {
   const plural = new Intl.PluralRules('ru-RU').select(count)
-  const word = plural === 'one' ? 'операция' : plural === 'few' ? 'операции' : 'операций'
+  const word = plural === 'one' ? forms[0] : plural === 'few' ? forms[1] : forms[2]
 
   return `${count} ${word}`
 }
 
-export function formatSubcategoryCount(count: number) {
-  const plural = new Intl.PluralRules('ru-RU').select(count)
-  const word = plural === 'one' ? 'подкатегория' : plural === 'few' ? 'подкатегории' : 'подкатегорий'
+export function formatOperationsCount(count: number) {
+  return formatCount(count, ['операция', 'операции', 'операций'])
+}
 
-  return `${count} ${word}`
+export function formatSubcategoryCount(count: number) {
+  return formatCount(count, ['подкатегория', 'подкатегории', 'подкатегорий'])
 }
 
 export function formatPercent(value: number) {

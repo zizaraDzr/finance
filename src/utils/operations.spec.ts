@@ -3,7 +3,6 @@ import type { Operation, Subcategory } from '@/types'
 import {
   buildOperationPeriodGroups,
   sortOperationsByDateDesc,
-  summarizeOperations,
 } from '@/utils/operations'
 import { createOperation } from '@/test/fixtures'
 
@@ -64,23 +63,6 @@ describe('sortOperationsByDateDesc', () => {
     sortOperationsByDateDesc(operations)
 
     expect(operations.map(item => item.id)).toEqual(['first', 'second'])
-  })
-})
-
-describe('summarizeOperations', () => {
-  it('summarizes income, expense and balance', () => {
-    const summary = summarizeOperations([
-      operation({ type: 0, sum: 1000 }),
-      operation({ type: 1, sum: 400 }),
-      operation({ type: 1, sum: 100 }),
-    ])
-
-    expect(summary).toEqual({
-      income: 1000,
-      expense: 500,
-      balance: 500,
-      count: 3,
-    })
   })
 })
 

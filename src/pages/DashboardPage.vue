@@ -95,8 +95,9 @@ import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import OperationListItem from '@/components/OperationListItem.vue'
 import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
-import { getMonthKey, isValidMonthKey, shiftMonthKey } from '@/utils/date'
+import { getMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatDate, formatMoney, formatMonthTitle } from '@/utils/formatters'
+import { readMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
 const route = useRoute()
@@ -104,10 +105,7 @@ const router = useRouter()
 const isSyncing = ref(false)
 const syncMessage = ref('')
 
-const selectedMonthKey = computed(() => {
-  const month = typeof route.query.month === 'string' ? route.query.month : null
-  return isValidMonthKey(month) ? month : store.currentMonthKey
-})
+const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
 const currentMonth = computed(() => store.getMonthlySummary(selectedMonthKey.value))
 const previousMonth = computed(() => store.getMonthlySummary(previousMonthKey.value))
@@ -161,18 +159,6 @@ function openExpenseAnalyticsPage() {
     },
   })
 }
-// const clearDB = () => {
-//   if (confirm('Удалить всю базу данных?')) {
-//     const DB_NAME = import.meta.env.VITE_DB_NAME;
-//     const request = indexedDB.deleteDatabase(DB_NAME);
-//     request.onsuccess = () => {
-//       alert(`База данных очищена ${DB_NAME} Страница будет перезагружена.`);
-//       // location.reload();
-//     };
-//     request.onerror = () => alert('Ошибка при очистке');
-//   }
-// }
-
 async function syncData() {
   isSyncing.value = true
   syncMessage.value = ''
