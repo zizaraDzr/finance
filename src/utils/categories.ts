@@ -103,3 +103,54 @@ function getCategoryPosition(categories: Category[], id: string) {
 function isValidOperationDate(operation: Operation) {
   return !Number.isNaN(new Date(operation.date).getTime())
 }
+
+export function compareByPositionThenName(
+  first: { position: number; name: string },
+  second: { position: number; name: string },
+) {
+  return first.position - second.position || first.name.localeCompare(second.name)
+}
+
+export function getTopCategoryPosition(categories: Category[], type: number) {
+  const positions = categories
+    .filter(category => category.type === type)
+    .map(category => category.position)
+
+  return positions.length ? Math.min(...positions) - 1 : 0
+}
+
+export function getNextSubcategoryPosition(subcategories: Subcategory[], categoryId: string) {
+  return (
+    subcategories
+      .filter(subcategory => subcategory.categoryID === categoryId)
+      .reduce((max, subcategory) => Math.max(max, subcategory.position), -1) + 1
+  )
+}
+
+export function countOperationsByCategory(operations: Operation[]) {
+  const counts = new Map<string, number>()
+
+  operations.forEach(operation => {
+    if (!operation.isDeleted && operation.categoryID) {
+      counts.set(operation.categoryID, (counts.get(operation.categoryID) ?? 0) + 1)
+    }
+  })
+
+  return counts
+}
+
+export function groupSubcategoriesByCategory(subcategories: Subcategory[]) {
+  const groups = new Map<string, Subcategory[]>()
+
+  subcategories
+    .filter(subcategory => !subcategory.isDeleted)
+    .forEach(subcategory => {
+      const group = groups.get(subcategory.categoryID) ?? []
+      group.push(subcategory)
+      groups.set(subcategory.categoryID, group)
+    })
+
+  groups.forEach(group => group.sort(compareByPositionThenName))
+
+  return groups
+}

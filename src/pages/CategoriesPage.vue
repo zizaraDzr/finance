@@ -218,6 +218,13 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import type { Category, Subcategory } from '@/types'
+import {
+  compareByPositionThenName,
+  countOperationsByCategory,
+  getNextSubcategoryPosition,
+  getTopCategoryPosition,
+  groupSubcategoriesByCategory,
+} from '@/utils/categories'
 import { formatOperationsCount } from '@/utils/formatters'
 import { readOptionalMonthQuery } from '@/utils/routeQuery'
 
@@ -241,45 +248,12 @@ const returnMonth = computed(() => readOptionalMonthQuery(route.query.month))
 const visibleCategories = computed(() =>
   store.categories
     .filter(category => category.type === selectedType.value && !category.isDeleted)
-    .slice()
-    .sort(
-      (first, second) =>
-        first.position - second.position || first.name.localeCompare(second.name),
-    ),
+    .sort(compareByPositionThenName),
 )
 
-const categoryOperationCounts = computed(() => {
-  const counts = new Map<string, number>()
+const categoryOperationCounts = computed(() => countOperationsByCategory(store.operations))
 
-  store.operations.forEach(operation => {
-    if (!operation.isDeleted && operation.categoryID) {
-      counts.set(operation.categoryID, (counts.get(operation.categoryID) || 0) + 1)
-    }
-  })
-
-  return counts
-})
-
-const subcategoriesByCategory = computed(() => {
-  const groups = new Map<string, Subcategory[]>()
-
-  store.subcategories
-    .filter(subcategory => !subcategory.isDeleted)
-    .forEach(subcategory => {
-      const group = groups.get(subcategory.categoryID) || []
-      group.push(subcategory)
-      groups.set(subcategory.categoryID, group)
-    })
-
-  groups.forEach(group => {
-    group.sort(
-      (first, second) =>
-        first.position - second.position || first.name.localeCompare(second.name),
-    )
-  })
-
-  return groups
-})
+const subcategoriesByCategory = computed(() => groupSubcategoriesByCategory(store.subcategories))
 
 function categoryOperationsCount(categoryId: string) {
   return categoryOperationCounts.value.get(categoryId) || 0
@@ -324,22 +298,6 @@ async function runSave(action: () => Promise<unknown>) {
   }
 }
 
-function getTopCategoryPosition(type: number) {
-  const positions = store.categories
-    .filter(category => category.type === type)
-    .map(category => category.position)
-
-  return positions.length ? Math.min(...positions) - 1 : 0
-}
-
-function getNextSubcategoryPosition(categoryId: string) {
-  return (
-    store.subcategories
-      .filter(subcategory => subcategory.categoryID === categoryId)
-      .reduce((max, subcategory) => Math.max(max, subcategory.position), -1) + 1
-  )
-}
-
 async function createCategory() {
   const name = newCategoryName.value.trim()
 
@@ -353,7 +311,7 @@ async function createCategory() {
       name,
       icon: newCategoryIcon.value.trim(),
       isActive: true,
-      position: getTopCategoryPosition(selectedType.value),
+      position: getTopCategoryPosition(store.categories, selectedType.value),
       type: selectedType.value,
       budgetSum: 0,
       budgetPeriod: 2,
@@ -442,7 +400,7 @@ async function createSubcategory(category: Category) {
     await store.addSubcategory({
       name,
       isActive: true,
-      position: getNextSubcategoryPosition(category.id),
+      position: getNextSubcategoryPosition(store.subcategories, category.id),
       categoryID: category.id,
     })
 

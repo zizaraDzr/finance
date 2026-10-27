@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, Operation, Subcategory } from '@/types'
-import { buildCategoryPickerGroups, getCategoryValue } from '@/utils/categories'
+import {
+  buildCategoryPickerGroups,
+  compareByPositionThenName,
+  countOperationsByCategory,
+  getCategoryValue,
+  getNextSubcategoryPosition,
+  getTopCategoryPosition,
+  groupSubcategoriesByCategory,
+} from '@/utils/categories'
 import { createCategory, createOperation, createSubcategory } from '@/test/fixtures'
 
 function category(overrides: Partial<Category>) {
@@ -97,5 +105,80 @@ describe('getCategoryValue', () => {
 
   it('returns an empty value without a category', () => {
     expect(getCategoryValue(operation({ categoryID: null, subcategoryID: null }))).toBe('')
+  })
+})
+
+describe('compareByPositionThenName', () => {
+  it('orders by position and then by name', () => {
+    const items = [
+      { position: 1, name: 'Б' },
+      { position: 0, name: 'Я' },
+      { position: 1, name: 'А' },
+    ]
+
+    const sorted = items.slice().sort(compareByPositionThenName)
+
+    expect(sorted.map(item => item.name)).toEqual(['Я', 'А', 'Б'])
+  })
+})
+
+describe('getTopCategoryPosition', () => {
+  it('places a new category above the existing ones of its type', () => {
+    const categories = [
+      category({ id: 'one', type: 1, position: 3 }),
+      category({ id: 'two', type: 1, position: 1 }),
+      category({ id: 'income', type: 0, position: -5 }),
+    ]
+
+    expect(getTopCategoryPosition(categories, 1)).toBe(0)
+  })
+
+  it('starts at zero when the type has no categories yet', () => {
+    expect(getTopCategoryPosition([], 1)).toBe(0)
+    expect(getTopCategoryPosition([category({ type: 1, position: 2 })], 0)).toBe(0)
+  })
+})
+
+describe('getNextSubcategoryPosition', () => {
+  it('places a new subcategory after the existing ones of the category', () => {
+    const subcategories = [
+      subcategory({ id: 'dairy', categoryID: 'food', position: 2 }),
+      subcategory({ id: 'meat', categoryID: 'food', position: 0 }),
+      subcategory({ id: 'gift', categoryID: 'gifts', position: 7 }),
+    ]
+
+    expect(getNextSubcategoryPosition(subcategories, 'food')).toBe(3)
+  })
+
+  it('starts at zero when the category has no subcategories yet', () => {
+    expect(getNextSubcategoryPosition([], 'food')).toBe(0)
+  })
+})
+
+describe('countOperationsByCategory', () => {
+  it('counts live operations per category and skips deleted or uncategorized ones', () => {
+    const counts = countOperationsByCategory([
+      operation({ categoryID: 'food' }),
+      operation({ categoryID: 'food' }),
+      operation({ categoryID: 'food', isDeleted: true }),
+      operation({ categoryID: null }),
+    ])
+
+    expect(counts.get('food')).toBe(2)
+    expect(counts.size).toBe(1)
+  })
+})
+
+describe('groupSubcategoriesByCategory', () => {
+  it('groups live subcategories and orders them by position then name', () => {
+    const groups = groupSubcategoriesByCategory([
+      subcategory({ id: 'second', categoryID: 'food', position: 1, name: 'Б' }),
+      subcategory({ id: 'first', categoryID: 'food', position: 1, name: 'А' }),
+      subcategory({ id: 'gift', categoryID: 'gifts', position: 0 }),
+      subcategory({ id: 'deleted', categoryID: 'food', isDeleted: true }),
+    ])
+
+    expect([...groups.keys()].sort()).toEqual(['food', 'gifts'])
+    expect(groups.get('food')?.map(item => item.name)).toEqual(['А', 'Б'])
   })
 })
