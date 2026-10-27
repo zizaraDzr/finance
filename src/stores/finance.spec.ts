@@ -181,4 +181,34 @@ describe('finance store operations', () => {
     await store.restoreOperation('operation-1')
     expect(store.operations[0]?.isDeleted).toBe(false)
   })
+
+  it('rolls back an operation update when saving fails', async () => {
+    const operation = createOperation({ id: 'operation-1', sum: 100 })
+    const store = createStore({ Operation: [operation] })
+    writeSnapshot.mockRejectedValueOnce(new Error('save failed'))
+
+    await expect(store.updateOperation('operation-1', { sum: 500 })).rejects.toThrow('save failed')
+
+    expect(store.operations[0]?.sum).toBe(100)
+  })
+
+  it('rolls back an operation deletion when saving fails', async () => {
+    const operation = createOperation({ id: 'operation-1' })
+    const store = createStore({ Operation: [operation] })
+    writeSnapshot.mockRejectedValueOnce(new Error('save failed'))
+
+    await expect(store.deleteOperation('operation-1')).rejects.toThrow('save failed')
+
+    expect(store.operations[0]?.isDeleted).toBe(false)
+  })
+
+  it('rolls back an operation restore when saving fails', async () => {
+    const operation = createOperation({ id: 'operation-1', isDeleted: true })
+    const store = createStore({ Operation: [operation] })
+    writeSnapshot.mockRejectedValueOnce(new Error('save failed'))
+
+    await expect(store.restoreOperation('operation-1')).rejects.toThrow('save failed')
+
+    expect(store.operations[0]?.isDeleted).toBe(true)
+  })
 })

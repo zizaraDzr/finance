@@ -163,6 +163,17 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const currencySymbol = computed(() => accounts.value[0]?.currencySymbol || '₽')
 
+  async function commit(mutation: () => void, rollback: () => void) {
+    mutation()
+
+    try {
+      await saveToIndexedDB()
+    } catch (error) {
+      rollback()
+      throw error
+    }
+  }
+
   async function addOperation(operation: NewOperation) {
     const newOperation: Operation = {
       ...operation,
@@ -170,13 +181,14 @@ export const useFinanceStore = defineStore('finance', () => {
       isDeleted: false,
     }
 
-    operations.value.push(newOperation)
-    try {
-      await saveToIndexedDB()
-    } catch (error) {
-      operations.value = operations.value.filter(item => item.id !== newOperation.id)
-      throw error
-    }
+    await commit(
+      () => {
+        operations.value.push(newOperation)
+      },
+      () => {
+        operations.value = operations.value.filter(item => item.id !== newOperation.id)
+      },
+    )
 
     return newOperation
   }
@@ -185,28 +197,56 @@ export const useFinanceStore = defineStore('finance', () => {
     const index = operations.value.findIndex(operation => operation.id === id)
     const currentOperation = operations.value[index]
 
-    if (currentOperation) {
-      operations.value[index] = { ...currentOperation, ...data }
-      await saveToIndexedDB()
+    if (!currentOperation) {
+      return
     }
+
+    await commit(
+      () => {
+        operations.value[index] = { ...currentOperation, ...data }
+      },
+      () => {
+        operations.value[index] = currentOperation
+      },
+    )
   }
 
   async function deleteOperation(id: string) {
     const operation = operations.value.find(item => item.id === id)
 
-    if (operation) {
-      operation.isDeleted = true
-      await saveToIndexedDB()
+    if (!operation) {
+      return
     }
+
+    const previousDeleted = operation.isDeleted
+
+    await commit(
+      () => {
+        operation.isDeleted = true
+      },
+      () => {
+        operation.isDeleted = previousDeleted
+      },
+    )
   }
 
   async function restoreOperation(id: string) {
     const operation = operations.value.find(item => item.id === id)
 
-    if (operation) {
-      operation.isDeleted = false
-      await saveToIndexedDB()
+    if (!operation) {
+      return
     }
+
+    const previousDeleted = operation.isDeleted
+
+    await commit(
+      () => {
+        operation.isDeleted = false
+      },
+      () => {
+        operation.isDeleted = previousDeleted
+      },
+    )
   }
 
   async function addCategory(category: NewCategory) {
@@ -216,14 +256,14 @@ export const useFinanceStore = defineStore('finance', () => {
       isDeleted: false,
     }
 
-    categories.value.push(newCategory)
-
-    try {
-      await saveToIndexedDB()
-    } catch (error) {
-      categories.value = categories.value.filter(item => item.id !== newCategory.id)
-      throw error
-    }
+    await commit(
+      () => {
+        categories.value.push(newCategory)
+      },
+      () => {
+        categories.value = categories.value.filter(item => item.id !== newCategory.id)
+      },
+    )
 
     return newCategory
   }
@@ -232,17 +272,18 @@ export const useFinanceStore = defineStore('finance', () => {
     const index = categories.value.findIndex(category => category.id === id)
     const currentCategory = categories.value[index]
 
-    if (currentCategory) {
-      const previousCategory = { ...currentCategory }
-      categories.value[index] = { ...currentCategory, ...data }
-
-      try {
-        await saveToIndexedDB()
-      } catch (error) {
-        categories.value[index] = previousCategory
-        throw error
-      }
+    if (!currentCategory) {
+      return
     }
+
+    await commit(
+      () => {
+        categories.value[index] = { ...currentCategory, ...data }
+      },
+      () => {
+        categories.value[index] = currentCategory
+      },
+    )
   }
 
   async function deleteCategory(id: string) {
@@ -257,20 +298,20 @@ export const useFinanceStore = defineStore('finance', () => {
       .filter(item => item.categoryID === id)
       .map(item => ({ item, isDeleted: item.isDeleted }))
 
-    category.isDeleted = true
-    categorySubcategories.forEach(({ item }) => {
-      item.isDeleted = true
-    })
-
-    try {
-      await saveToIndexedDB()
-    } catch (error) {
-      category.isDeleted = previousCategoryDeleted
-      categorySubcategories.forEach(({ item, isDeleted }) => {
-        item.isDeleted = isDeleted
-      })
-      throw error
-    }
+    await commit(
+      () => {
+        category.isDeleted = true
+        categorySubcategories.forEach(({ item }) => {
+          item.isDeleted = true
+        })
+      },
+      () => {
+        category.isDeleted = previousCategoryDeleted
+        categorySubcategories.forEach(({ item, isDeleted }) => {
+          item.isDeleted = isDeleted
+        })
+      },
+    )
   }
 
   async function addSubcategory(subcategory: NewSubcategory) {
@@ -280,14 +321,14 @@ export const useFinanceStore = defineStore('finance', () => {
       isDeleted: false,
     }
 
-    subcategories.value.push(newSubcategory)
-
-    try {
-      await saveToIndexedDB()
-    } catch (error) {
-      subcategories.value = subcategories.value.filter(item => item.id !== newSubcategory.id)
-      throw error
-    }
+    await commit(
+      () => {
+        subcategories.value.push(newSubcategory)
+      },
+      () => {
+        subcategories.value = subcategories.value.filter(item => item.id !== newSubcategory.id)
+      },
+    )
 
     return newSubcategory
   }
@@ -296,17 +337,18 @@ export const useFinanceStore = defineStore('finance', () => {
     const index = subcategories.value.findIndex(subcategory => subcategory.id === id)
     const currentSubcategory = subcategories.value[index]
 
-    if (currentSubcategory) {
-      const previousSubcategory = { ...currentSubcategory }
-      subcategories.value[index] = { ...currentSubcategory, ...data }
-
-      try {
-        await saveToIndexedDB()
-      } catch (error) {
-        subcategories.value[index] = previousSubcategory
-        throw error
-      }
+    if (!currentSubcategory) {
+      return
     }
+
+    await commit(
+      () => {
+        subcategories.value[index] = { ...currentSubcategory, ...data }
+      },
+      () => {
+        subcategories.value[index] = currentSubcategory
+      },
+    )
   }
 
   async function deleteSubcategory(id: string) {
@@ -316,15 +358,16 @@ export const useFinanceStore = defineStore('finance', () => {
       return
     }
 
-    const previousSubcategoryDeleted = subcategory.isDeleted
-    subcategory.isDeleted = true
+    const previousDeleted = subcategory.isDeleted
 
-    try {
-      await saveToIndexedDB()
-    } catch (error) {
-      subcategory.isDeleted = previousSubcategoryDeleted
-      throw error
-    }
+    await commit(
+      () => {
+        subcategory.isDeleted = true
+      },
+      () => {
+        subcategory.isDeleted = previousDeleted
+      },
+    )
   }
 
   function getCategory(id: string | null) {
