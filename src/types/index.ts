@@ -82,6 +82,11 @@ export interface OperationSummary {
   count: number
 }
 
+export interface MonthlyAmount {
+  month: string
+  amount: number
+}
+
 export interface OperationSubcategoryGroup extends OperationSummary {
   key: string
   name: string

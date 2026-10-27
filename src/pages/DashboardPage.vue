@@ -3,7 +3,15 @@
     <header class="dashboard__header">
       <div class="month-heading">
         <h2>{{ selectedMonthTitle }}</h2>
-        <button class="categories-button" type="button" @click="openCategoriesPage">Категории</button>
+
+        <div class="month-heading__links">
+          <button class="month-heading__link" type="button" @click="openCategoriesPage">
+            Категории
+          </button>
+          <button class="month-heading__link" type="button" @click="openCategoryAnalyticsPage">
+            Аналитика
+          </button>
+        </div>
       </div>
 
       <div class="header-actions">
@@ -144,6 +152,15 @@ function openOperationsPage() {
 function openCategoriesPage() {
   router.push({
     name: 'categories',
+    query: {
+      month: selectedMonthKey.value,
+    },
+  })
+}
+
+function openCategoryAnalyticsPage() {
+  router.push({
+    name: 'category-analytics',
     query: {
       month: selectedMonthKey.value,
     },

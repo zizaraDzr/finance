@@ -130,6 +130,12 @@ button {
   min-width: 0;
 }
 
+.month-heading__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .header-actions {
   display: flex;
   align-items: stretch;
@@ -138,7 +144,7 @@ button {
 
 .add-button,
 .back-button,
-.categories-button,
+.month-heading__link,
 .sync-button,
 .submit-button,
 .panel-link-button,
@@ -175,7 +181,7 @@ button {
   border-radius: 999px;
 }
 
-.categories-button {
+.month-heading__link {
   min-height: 36px;
   padding: 0 14px;
   border-radius: 999px;
@@ -209,7 +215,7 @@ button {
 
 .add-button:hover,
 .back-button:hover,
-.categories-button:hover,
+.month-heading__link:hover,
 .sync-button:hover,
 .submit-button:hover,
 .panel-link-button:hover,
@@ -457,6 +463,42 @@ h2 {
   display: grid;
   gap: 18px;
   min-width: 0;
+}
+
+.category-analytics__picker {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 18px;
+}
+
+.category-analytics__picker button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-analytics__breakdown {
+  margin-top: 18px;
+}
+
+.analytics-change {
+  font-weight: 800;
+}
+
+.analytics-change.analytics-change--up {
+  color: #ff8d97;
+}
+
+.analytics-change.analytics-change--down {
+  color: #8df3b5;
+}
+
+.analytics-change.analytics-change--flat {
+  color: #d8c7ff;
+}
+
+.category-analytics__change {
+  margin: 0;
+  font-size: 0.83rem;
 }
 
 .expense-breakdown {

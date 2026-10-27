@@ -27,6 +27,7 @@ async function mountPage(data: FinanceData = {}) {
       { path: '/categories', name: 'categories', component: { template: '<div />' } },
       { path: '/operations', name: 'operations', component: { template: '<div />' } },
       { path: '/expense-analytics', name: 'expense-analytics', component: { template: '<div />' } },
+      { path: '/category-analytics', name: 'category-analytics', component: { template: '<div />' } },
     ],
   })
   await router.push('/?month=2026-10')
@@ -39,6 +40,14 @@ async function mountPage(data: FinanceData = {}) {
   })
 
   return { wrapper, store, router }
+}
+
+async function openHeaderLink(wrapper: Awaited<ReturnType<typeof mountPage>>['wrapper'], label: string) {
+  const button = wrapper.findAll('button').find(item => item.text() === label)
+
+  expect(button).toBeDefined()
+  await button?.trigger('click')
+  await flushPromises()
 }
 
 describe('DashboardPage', () => {
@@ -59,10 +68,18 @@ describe('DashboardPage', () => {
   it('opens the categories page with the selected month', async () => {
     const { wrapper, router } = await mountPage()
 
-    await wrapper.find('.categories-button').trigger('click')
-    await flushPromises()
+    await openHeaderLink(wrapper, 'Категории')
 
     expect(router.currentRoute.value.name).toBe('categories')
+    expect(router.currentRoute.value.query.month).toBe('2026-10')
+  })
+
+  it('opens the category analytics page with the selected month', async () => {
+    const { wrapper, router } = await mountPage()
+
+    await openHeaderLink(wrapper, 'Аналитика')
+
+    expect(router.currentRoute.value.name).toBe('category-analytics')
     expect(router.currentRoute.value.query.month).toBe('2026-10')
   })
 })

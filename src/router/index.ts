@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CategoriesPage from '@/pages/CategoriesPage.vue'
+import CategoryAnalyticsPage from '@/pages/CategoryAnalyticsPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
 import ExpenseAnalyticsPage from '@/pages/ExpenseAnalyticsPage.vue'
 import OperationFormPage from '@/pages/OperationFormPage.vue'
@@ -34,6 +35,11 @@ const router = createRouter({
       path: '/expense-analytics',
       name: 'expense-analytics',
       component: ExpenseAnalyticsPage,
+    },
+    {
+      path: '/category-analytics',
+      name: 'category-analytics',
+      component: CategoryAnalyticsPage,
     },
     {
       path: '/add',
