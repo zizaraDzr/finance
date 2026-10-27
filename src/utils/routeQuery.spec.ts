@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  readAnalyticsGranularity,
+  readAnalyticsWindow,
   readExpensePeriod,
   readMonthQuery,
   readOperationType,
@@ -53,5 +55,24 @@ describe('readExpensePeriod', () => {
     expect(readExpensePeriod('month')).toBe('month')
     expect(readExpensePeriod('week')).toBe('month')
     expect(readExpensePeriod(undefined)).toBe('month')
+  })
+})
+
+describe('readAnalyticsGranularity', () => {
+  it('accepts year and defaults to month', () => {
+    expect(readAnalyticsGranularity('year')).toBe('year')
+    expect(readAnalyticsGranularity('month')).toBe('month')
+    expect(readAnalyticsGranularity('week')).toBe('month')
+    expect(readAnalyticsGranularity(undefined)).toBe('month')
+  })
+})
+
+describe('readAnalyticsWindow', () => {
+  it('accepts the known windows and defaults to the whole history', () => {
+    expect(readAnalyticsWindow('1')).toBe(1)
+    expect(readAnalyticsWindow('3')).toBe(3)
+    expect(readAnalyticsWindow('all')).toBe('all')
+    expect(readAnalyticsWindow('5')).toBe('all')
+    expect(readAnalyticsWindow(undefined)).toBe('all')
   })
 })

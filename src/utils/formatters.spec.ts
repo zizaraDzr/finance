@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatChangeHint,
   formatDate,
   formatMoney,
   formatMonthShortTitle,
   formatMonthTitle,
   formatOperationsCount,
   formatPercent,
+  formatSignedMoney,
   formatSignedPercent,
   formatSubcategoryCount,
 } from '@/utils/formatters'
@@ -69,5 +71,26 @@ describe('formatMonthShortTitle', () => {
   it('builds a compact month label with a two-digit year', () => {
     expect(formatMonthShortTitle('2026-10')).toBe('Окт 26')
     expect(formatMonthShortTitle('2026-05')).toBe('Май 26')
+  })
+})
+
+describe('formatSignedMoney', () => {
+  it('marks the direction of the money difference', () => {
+    expect(normalizeSpaces(formatSignedMoney(200, '₽'))).toBe('+200 ₽')
+    expect(normalizeSpaces(formatSignedMoney(-500, '₽'))).toBe('−500 ₽')
+    expect(normalizeSpaces(formatSignedMoney(0, '₽'))).toBe('0 ₽')
+  })
+})
+
+describe('formatChangeHint', () => {
+  it('puts the money difference in brackets after the percentage', () => {
+    expect(normalizeSpaces(formatChangeHint(100, 50, '₽'))).toBe('+50% (+100 ₽)')
+    expect(normalizeSpaces(formatChangeHint(-500, -25, '₽'))).toBe('−25% (−500 ₽)')
+    expect(normalizeSpaces(formatChangeHint(0, 0, '₽'))).toBe('0% (0 ₽)')
+  })
+
+  it('shows only the money when there is no base for a percentage', () => {
+    expect(normalizeSpaces(formatChangeHint(300, null, '₽'))).toBe('+300 ₽')
+    expect(normalizeSpaces(formatChangeHint(0, null, '₽'))).toBe('—')
   })
 })

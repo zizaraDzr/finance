@@ -77,6 +77,25 @@ export function formatSignedPercent(value: number | null) {
   return value < 0 ? `−${percent}` : percent
 }
 
+export function formatSignedMoney(value: number, currencySymbol: string) {
+  const money = formatMoney(Math.abs(value), currencySymbol)
+
+  if (value === 0) {
+    return money
+  }
+
+  return `${value > 0 ? '+' : '−'}${money}`
+}
+
+/** The percentage change with the money difference it stands for, e.g. `+50% (+100 ₽)`. */
+export function formatChangeHint(change: number, percentChange: number | null, currencySymbol: string) {
+  if (percentChange === null) {
+    return change === 0 ? '—' : formatSignedMoney(change, currencySymbol)
+  }
+
+  return `${formatSignedPercent(percentChange)} (${formatSignedMoney(change, currencySymbol)})`
+}
+
 export function formatDate(value: string) {
   return shortDateFormatter.format(new Date(value))
 }

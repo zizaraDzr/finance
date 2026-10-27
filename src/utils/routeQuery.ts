@@ -1,4 +1,10 @@
-import type { ExpensePeriod, OperationsPeriod, OperationTypeFilter } from '@/types'
+import type {
+  AnalyticsGranularity,
+  AnalyticsWindow,
+  ExpensePeriod,
+  OperationsPeriod,
+  OperationTypeFilter,
+} from '@/types'
 import { isValidMonthKey } from '@/utils/date'
 
 function readString(value: unknown) {
@@ -30,4 +36,14 @@ export function readOperationType(value: unknown): OperationTypeFilter {
 
 export function readExpensePeriod(value: unknown): ExpensePeriod {
   return readString(value) === 'year' ? 'year' : 'month'
+}
+
+export function readAnalyticsGranularity(value: unknown): AnalyticsGranularity {
+  return readString(value) === 'year' ? 'year' : 'month'
+}
+
+export function readAnalyticsWindow(value: unknown): AnalyticsWindow {
+  const years = Number(readString(value))
+
+  return years === 1 || years === 2 || years === 3 ? years : 'all'
 }
