@@ -13,6 +13,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
 })
 const timeFormatter = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
 const monthTitleFormatter = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' })
+const monthShortFormatter = new Intl.DateTimeFormat('ru-RU', { month: 'short' })
 const yearFormatter = new Intl.DateTimeFormat('ru-RU', { year: 'numeric' })
 const weekdayFormatter = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' })
 const dayTitleFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -62,6 +63,20 @@ export function formatPercent(value: number) {
   return `${percentFormatter.format(value)}%`
 }
 
+export function formatSignedPercent(value: number | null) {
+  if (value === null) {
+    return '—'
+  }
+
+  const percent = `${percentFormatter.format(Math.abs(value))}%`
+
+  if (value > 0) {
+    return `+${percent}`
+  }
+
+  return value < 0 ? `−${percent}` : percent
+}
+
 export function formatDate(value: string) {
   return shortDateFormatter.format(new Date(value))
 }
@@ -79,6 +94,13 @@ export function formatMonthTitle(monthKey: string) {
   const date = new Date(year, month - 1, 1)
 
   return capitalizeFirstLetter(monthTitleFormatter.format(date))
+}
+
+export function formatMonthShortTitle(monthKey: string) {
+  const { year, month } = parseMonthKey(monthKey)
+  const label = monthShortFormatter.format(new Date(year, month - 1, 1)).replace('.', '')
+
+  return `${capitalizeFirstLetter(label)} ${String(year).slice(-2)}`
 }
 
 export function formatOperationPeriodTitle(date: Date, period: OperationsPeriod) {

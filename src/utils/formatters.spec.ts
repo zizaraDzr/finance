@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   formatDate,
   formatMoney,
+  formatMonthShortTitle,
   formatMonthTitle,
   formatOperationsCount,
   formatPercent,
+  formatSignedPercent,
   formatSubcategoryCount,
 } from '@/utils/formatters'
 
@@ -51,5 +53,21 @@ describe('formatSubcategoryCount', () => {
     expect(formatSubcategoryCount(1)).toBe('1 подкатегория')
     expect(formatSubcategoryCount(3)).toBe('3 подкатегории')
     expect(formatSubcategoryCount(11)).toBe('11 подкатегорий')
+  })
+})
+
+describe('formatSignedPercent', () => {
+  it('marks the direction of the change and the missing comparison', () => {
+    expect(formatSignedPercent(12.34)).toBe('+12,3%')
+    expect(formatSignedPercent(-5)).toBe('−5%')
+    expect(formatSignedPercent(0)).toBe('0%')
+    expect(formatSignedPercent(null)).toBe('—')
+  })
+})
+
+describe('formatMonthShortTitle', () => {
+  it('builds a compact month label with a two-digit year', () => {
+    expect(formatMonthShortTitle('2026-10')).toBe('Окт 26')
+    expect(formatMonthShortTitle('2026-05')).toBe('Май 26')
   })
 })
