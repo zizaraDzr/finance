@@ -97,6 +97,7 @@ import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
 import { getMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatDate, formatMoney, formatMonthTitle } from '@/utils/formatters'
+import { sortOperationsByDateDesc } from '@/utils/operations'
 import { readMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
@@ -114,11 +115,11 @@ const selectedMonthTitle = computed(() => formatMonthTitle(selectedMonthKey.valu
 const previousMonthTitle = computed(() => formatMonthTitle(previousMonthKey.value))
 
 const recentOperations = computed(() =>
-  store.activeOperations
-    .filter(operation => getMonthKey(new Date(operation.date)) === selectedMonthKey.value)
-    .slice()
-    .sort((first, second) => new Date(second.date).getTime() - new Date(first.date).getTime())
-    .slice(0, 5),
+  sortOperationsByDateDesc(
+    store.activeOperations.filter(
+      operation => getMonthKey(new Date(operation.date)) === selectedMonthKey.value,
+    ),
+  ).slice(0, 5),
 )
 
 function openAddPage() {
