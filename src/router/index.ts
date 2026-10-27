@@ -5,16 +5,11 @@ import DashboardPage from '@/pages/DashboardPage.vue'
 import ExpenseAnalyticsPage from '@/pages/ExpenseAnalyticsPage.vue'
 import OperationFormPage from '@/pages/OperationFormPage.vue'
 import OperationsPage from '@/pages/OperationsPage.vue'
+import { resolveScrollPosition } from '@/router/scroll'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  scrollBehavior(_to, _from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    }
-
-    return { top: 0 }
-  },
+  scrollBehavior: resolveScrollPosition,
   routes: [
     {
       path: '/',
