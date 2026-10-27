@@ -20,13 +20,7 @@ type SyncResult =
 const syncEndpoint = '/api/finance-data'
 
 export async function fetchServerFinanceSnapshot() {
-  const headers: HeadersInit = {}
-  const syncToken = getSyncHeaders().Authorization
-
-  if (syncToken) {
-    headers.Authorization = syncToken
-  }
-  const response = await fetch(syncEndpoint, { headers })
+  const response = await fetch(syncEndpoint, { headers: getAuthHeaders() })
 
   if (!response.ok) {
     throw new Error('Не удалось получить данные с сервера.')
@@ -73,38 +67,24 @@ export async function syncFinanceData(store: FinanceStore): Promise<SyncResult> 
 }
 
 async function uploadFinanceSnapshot(snapshot: FinanceSnapshot) {
-  const headers: HeadersInit = {}
-  const syncToken = getSyncHeaders().Authorization
-
-  if (syncToken) {
-    headers.Authorization = syncToken
-  }
   const response = await fetch(syncEndpoint, {
     method: 'PUT',
     headers: {
-      ...headers,
+      ...getAuthHeaders(),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(snapshot),
   })
 
-  if (response.status === 409) {
+  if (response.status === 409 || response.ok) {
     return response.json() as Promise<FinanceSnapshot>
   }
 
-  if (!response.ok) {
-    throw new Error('Не удалось сохранить данные на сервере.')
-  }
-
-  return response.json() as Promise<FinanceSnapshot>
+  throw new Error('Не удалось сохранить данные на сервере.')
 }
 
-function getSyncHeaders() {
+function getAuthHeaders(): HeadersInit {
   const token = import.meta.env.VITE_SYNC_TOKEN
 
-  return token
-    ? {
-        Authorization: `Bearer ${token}`,
-      }
-    : {}
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
