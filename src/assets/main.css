@@ -572,6 +572,12 @@ h2 {
   background: rgba(216, 199, 255, 0.42);
 }
 
+.trend-chart,
+.histogram-chart {
+  /* Размер шрифта подсказок со значениями внутри графиков */
+  --chart-hint-font-size: 0.9rem;
+}
+
 .trend-chart {
   width: 100%;
   /* min-height: 260px; */
@@ -640,7 +646,7 @@ h2 {
 
 .histogram-chart__average-label {
   fill: #aef8c9;
-  font-size: 0.68rem;
+  font-size: var(--chart-hint-font-size);
   font-weight: 800;
   text-anchor: end;
 }
@@ -661,7 +667,7 @@ h2 {
 
 .histogram-chart__max-label {
   fill: #fff9ff;
-  font-size: 0.68rem;
+  font-size: var(--chart-hint-font-size);
   font-weight: 800;
 }
 

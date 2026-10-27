@@ -341,7 +341,7 @@ function getChartY(value: number) {
 
 /* Значения рядом с точками */
 .trend-chart__value {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 600;
   pointer-events: none;
   white-space: nowrap;
