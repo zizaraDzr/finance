@@ -1,5 +1,39 @@
 import { describe, expect, it } from 'vitest'
-import { formatOperationsCount, formatSubcategoryCount } from '@/utils/formatters'
+import {
+  formatDate,
+  formatMoney,
+  formatMonthTitle,
+  formatOperationsCount,
+  formatPercent,
+  formatSubcategoryCount,
+} from '@/utils/formatters'
+
+function normalizeSpaces(value: string) {
+  return value.replace(/\s/g, ' ')
+}
+
+describe('formatMoney', () => {
+  it('formats rubles and dollars without fractional digits', () => {
+    expect(normalizeSpaces(formatMoney(1234, '₽'))).toBe('1 234 ₽')
+    expect(normalizeSpaces(formatMoney(0.4, '₽'))).toBe('0 ₽')
+    expect(normalizeSpaces(formatMoney(1234.5, '$'))).toBe('1 235 $')
+  })
+})
+
+describe('formatPercent', () => {
+  it('keeps at most one fractional digit', () => {
+    expect(formatPercent(12.34)).toBe('12,3%')
+    expect(formatPercent(50)).toBe('50%')
+    expect(formatPercent(0.05)).toBe('0,1%')
+  })
+})
+
+describe('formatDate and formatMonthTitle', () => {
+  it('formats a short date and a month title', () => {
+    expect(formatDate('2026-10-15T12:00:00.000Z')).toBe('15 окт.')
+    expect(formatMonthTitle('2026-10')).toBe('Октябрь 2026 г.')
+  })
+})
 
 describe('formatOperationsCount', () => {
   it('declines the word for Russian plural forms', () => {

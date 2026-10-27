@@ -1,21 +1,50 @@
 import type { OperationsPeriod } from '@/types'
 import { getEndOfWeek, getMonthKey, getStartOfWeek } from '@/utils/date'
 
-function createMoneyFormatter(currencySymbol: string) {
-  return new Intl.NumberFormat('ru-RU', {
+const moneyFormatters = new Map<string, Intl.NumberFormat>()
+const percentFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 })
+const pluralRules = new Intl.PluralRules('ru-RU')
+const shortDateFormatter = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' })
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+const timeFormatter = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
+const monthTitleFormatter = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' })
+const yearFormatter = new Intl.DateTimeFormat('ru-RU', { year: 'numeric' })
+const weekdayFormatter = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' })
+const dayTitleFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+function getMoneyFormatter(currencySymbol: string) {
+  const cachedFormatter = moneyFormatters.get(currencySymbol)
+
+  if (cachedFormatter) {
+    return cachedFormatter
+  }
+
+  const formatter = new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: currencySymbol === '$' ? 'USD' : 'RUB',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })
+  moneyFormatters.set(currencySymbol, formatter)
+
+  return formatter
 }
 
 export function formatMoney(value: number, currencySymbol: string) {
-  return createMoneyFormatter(currencySymbol).format(value)
+  return getMoneyFormatter(currencySymbol).format(value)
 }
 
 function formatCount(count: number, forms: readonly [one: string, few: string, many: string]) {
-  const plural = new Intl.PluralRules('ru-RU').select(count)
+  const plural = pluralRules.select(count)
   const word = plural === 'one' ? forms[0] : plural === 'few' ? forms[1] : forms[2]
 
   return `${count} ${word}`
@@ -30,48 +59,31 @@ export function formatSubcategoryCount(count: number) {
 }
 
 export function formatPercent(value: number) {
-  return `${new Intl.NumberFormat('ru-RU', {
-    maximumFractionDigits: 1,
-  }).format(value)}%`
+  return `${percentFormatter.format(value)}%`
 }
 
 export function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: 'short',
-  }).format(new Date(value))
+  return shortDateFormatter.format(new Date(value))
 }
 
 export function formatOperationDateTime(value: string) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return dateTimeFormatter.format(new Date(value))
 }
 
 export function formatOperationTime(value: string) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return timeFormatter.format(new Date(value))
 }
 
 export function formatMonthTitle(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number)
   const date = new Date(year || 0, (month || 1) - 1, 1)
-  const title = new Intl.DateTimeFormat('ru-RU', {
-    month: 'long',
-    year: 'numeric',
-  }).format(date)
 
-  return capitalizeFirstLetter(title)
+  return capitalizeFirstLetter(monthTitleFormatter.format(date))
 }
 
 export function formatOperationPeriodTitle(date: Date, period: OperationsPeriod) {
   if (period === 'year') {
-    return new Intl.DateTimeFormat('ru-RU', { year: 'numeric' }).format(date)
+    return yearFormatter.format(date)
   }
 
   if (period === 'month') {
@@ -89,7 +101,7 @@ export function formatOperationPeriodTitle(date: Date, period: OperationsPeriod)
 
 export function formatOperationPeriodSubtitle(date: Date, period: OperationsPeriod) {
   if (period === 'day') {
-    return new Intl.DateTimeFormat('ru-RU', { weekday: 'long' }).format(date)
+    return weekdayFormatter.format(date)
   }
 
   if (period === 'week') {
@@ -104,20 +116,11 @@ export function formatOperationPeriodSubtitle(date: Date, period: OperationsPeri
 }
 
 function formatDayTitle(date: Date) {
-  const title = new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date)
-
-  return capitalizeFirstLetter(title)
+  return capitalizeFirstLetter(dayTitleFormatter.format(date))
 }
 
 function formatShortDate(date: Date) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: 'short',
-  }).format(date)
+  return shortDateFormatter.format(date)
 }
 
 function capitalizeFirstLetter(value: string) {
