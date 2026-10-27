@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import type { Ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Account, Category, Operation, Subcategory, Target } from '@/types'
 import {
@@ -23,6 +24,11 @@ export type MonthlySummary = {
 export type NewOperation = Omit<Operation, 'id' | 'isDeleted'>
 export type NewCategory = Omit<Category, 'id' | 'isDeleted'>
 export type NewSubcategory = Omit<Subcategory, 'id' | 'isDeleted'>
+
+type SoftDeletable = {
+  id: string
+  isDeleted: boolean
+}
 
 function emptyMonthSummary(month: string): MonthlySummary {
   return {
@@ -174,116 +180,93 @@ export const useFinanceStore = defineStore('finance', () => {
     }
   }
 
-  async function addOperation(operation: NewOperation) {
-    const newOperation: Operation = {
-      ...operation,
-      id: generateGuid(),
-      isDeleted: false,
+  function collectionActions<T extends SoftDeletable>(items: Ref<T[]>) {
+    async function add(entity: T) {
+      await commit(
+        () => {
+          items.value.push(entity)
+        },
+        () => {
+          items.value = items.value.filter(item => item.id !== entity.id)
+        },
+      )
+
+      return entity
     }
 
-    await commit(
-      () => {
-        operations.value.push(newOperation)
-      },
-      () => {
-        operations.value = operations.value.filter(item => item.id !== newOperation.id)
-      },
-    )
+    async function update(id: string, data: Partial<T>) {
+      const index = items.value.findIndex(item => item.id === id)
+      const current = items.value[index]
 
-    return newOperation
+      if (!current) {
+        return
+      }
+
+      await commit(
+        () => {
+          items.value[index] = { ...current, ...data }
+        },
+        () => {
+          items.value[index] = current
+        },
+      )
+    }
+
+    async function remove(id: string) {
+      const item = items.value.find(entry => entry.id === id)
+
+      if (!item) {
+        return
+      }
+
+      const previousDeleted = item.isDeleted
+
+      await commit(
+        () => {
+          item.isDeleted = true
+        },
+        () => {
+          item.isDeleted = previousDeleted
+        },
+      )
+    }
+
+    async function restore(id: string) {
+      const item = items.value.find(entry => entry.id === id)
+
+      if (!item) {
+        return
+      }
+
+      const previousDeleted = item.isDeleted
+
+      await commit(
+        () => {
+          item.isDeleted = false
+        },
+        () => {
+          item.isDeleted = previousDeleted
+        },
+      )
+    }
+
+    return { add, update, remove, restore }
   }
 
-  async function updateOperation(id: string, data: Partial<Operation>) {
-    const index = operations.value.findIndex(operation => operation.id === id)
-    const currentOperation = operations.value[index]
+  const operationActions = collectionActions(operations)
+  const categoryActions = collectionActions(categories)
+  const subcategoryActions = collectionActions(subcategories)
 
-    if (!currentOperation) {
-      return
-    }
-
-    await commit(
-      () => {
-        operations.value[index] = { ...currentOperation, ...data }
-      },
-      () => {
-        operations.value[index] = currentOperation
-      },
-    )
+  function addOperation(operation: NewOperation) {
+    return operationActions.add({ ...operation, id: generateGuid(), isDeleted: false })
   }
 
-  async function deleteOperation(id: string) {
-    const operation = operations.value.find(item => item.id === id)
-
-    if (!operation) {
-      return
-    }
-
-    const previousDeleted = operation.isDeleted
-
-    await commit(
-      () => {
-        operation.isDeleted = true
-      },
-      () => {
-        operation.isDeleted = previousDeleted
-      },
-    )
+  function addCategory(category: NewCategory) {
+    return categoryActions.add({ ...category, id: generateGuid(), isDeleted: false })
   }
 
-  async function restoreOperation(id: string) {
-    const operation = operations.value.find(item => item.id === id)
-
-    if (!operation) {
-      return
-    }
-
-    const previousDeleted = operation.isDeleted
-
-    await commit(
-      () => {
-        operation.isDeleted = false
-      },
-      () => {
-        operation.isDeleted = previousDeleted
-      },
-    )
-  }
-
-  async function addCategory(category: NewCategory) {
-    const newCategory: Category = {
-      ...category,
-      id: generateGuid(),
-      isDeleted: false,
-    }
-
-    await commit(
-      () => {
-        categories.value.push(newCategory)
-      },
-      () => {
-        categories.value = categories.value.filter(item => item.id !== newCategory.id)
-      },
-    )
-
-    return newCategory
-  }
-
-  async function updateCategory(id: string, data: Partial<Category>) {
-    const index = categories.value.findIndex(category => category.id === id)
-    const currentCategory = categories.value[index]
-
-    if (!currentCategory) {
-      return
-    }
-
-    await commit(
-      () => {
-        categories.value[index] = { ...currentCategory, ...data }
-      },
-      () => {
-        categories.value[index] = currentCategory
-      },
-    )
+  function addSubcategory(subcategory: NewSubcategory) {
+    return subcategoryActions.add({ ...subcategory, id: generateGuid(), isDeleted: false })
   }
 
   async function deleteCategory(id: string) {
@@ -310,62 +293,6 @@ export const useFinanceStore = defineStore('finance', () => {
         categorySubcategories.forEach(({ item, isDeleted }) => {
           item.isDeleted = isDeleted
         })
-      },
-    )
-  }
-
-  async function addSubcategory(subcategory: NewSubcategory) {
-    const newSubcategory: Subcategory = {
-      ...subcategory,
-      id: generateGuid(),
-      isDeleted: false,
-    }
-
-    await commit(
-      () => {
-        subcategories.value.push(newSubcategory)
-      },
-      () => {
-        subcategories.value = subcategories.value.filter(item => item.id !== newSubcategory.id)
-      },
-    )
-
-    return newSubcategory
-  }
-
-  async function updateSubcategory(id: string, data: Partial<Subcategory>) {
-    const index = subcategories.value.findIndex(subcategory => subcategory.id === id)
-    const currentSubcategory = subcategories.value[index]
-
-    if (!currentSubcategory) {
-      return
-    }
-
-    await commit(
-      () => {
-        subcategories.value[index] = { ...currentSubcategory, ...data }
-      },
-      () => {
-        subcategories.value[index] = currentSubcategory
-      },
-    )
-  }
-
-  async function deleteSubcategory(id: string) {
-    const subcategory = subcategories.value.find(item => item.id === id)
-
-    if (!subcategory) {
-      return
-    }
-
-    const previousDeleted = subcategory.isDeleted
-
-    await commit(
-      () => {
-        subcategory.isDeleted = true
-      },
-      () => {
-        subcategory.isDeleted = previousDeleted
       },
     )
   }
@@ -417,15 +344,15 @@ export const useFinanceStore = defineStore('finance', () => {
     saveSnapshotToIndexedDB,
     loadFromIndexedDB,
     addOperation,
-    updateOperation,
-    deleteOperation,
-    restoreOperation,
+    updateOperation: operationActions.update,
+    deleteOperation: operationActions.remove,
+    restoreOperation: operationActions.restore,
     addCategory,
-    updateCategory,
+    updateCategory: categoryActions.update,
     deleteCategory,
     addSubcategory,
-    updateSubcategory,
-    deleteSubcategory,
+    updateSubcategory: subcategoryActions.update,
+    deleteSubcategory: subcategoryActions.remove,
     getCategory,
     getSubcategory,
     getCategoryName,
