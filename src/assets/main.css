@@ -476,6 +476,10 @@ h2 {
   white-space: nowrap;
 }
 
+.category-analytics__granularity {
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+}
+
 .category-analytics__breakdown {
   margin-top: 18px;
 }

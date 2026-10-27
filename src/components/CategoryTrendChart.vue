@@ -2,15 +2,13 @@
   <article class="panel analytics-panel analytics-chart">
     <div class="panel__header">
       <div>
-        <h2>Расход по месяцам</h2>
+        <h2>{{ title }}</h2>
         <span>{{ pointsLabel }}</span>
       </div>
     </div>
 
-    <p v-if="points.length === 0" class="empty-state">За это время расходов по категории не было.</p>
-
-    <div v-else class="histogram-chart category-trend-chart">
-      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" role="img" aria-label="Расход по месяцам">
+    <div class="histogram-chart category-trend-chart">
+      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" role="img" :aria-label="title">
         <line
           class="histogram-chart__baseline"
           :x1="chartPlotLeft"
@@ -27,7 +25,7 @@
           :y2="averageY"
         />
 
-        <g v-for="(point, index) in points" :key="point.month">
+        <g v-for="(point, index) in points" :key="`${point.label}:${index}`">
           <rect
             class="histogram-chart__bar category-trend-chart__bar"
             :class="{ 'histogram-chart__bar--max': index === maxIndex }"
@@ -43,7 +41,7 @@
             :x="getBarCenterX(index)"
             :y="chartHeight - 18"
           >
-            {{ formatMonthShortTitle(point.month) }}
+            {{ point.label }}
           </text>
         </g>
       </svg>
@@ -53,12 +51,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MonthlyAmount } from '@/types'
-import { formatMonthShortTitle } from '@/utils/formatters'
 
 const props = defineProps<{
-  points: MonthlyAmount[]
+  points: Array<{ label: string; amount: number }>
   average: number
+  title: string
 }>()
 
 const chartWidth = 720
@@ -76,12 +73,10 @@ const pointsLabel = computed(() => {
   const last = props.points.at(-1)
 
   if (!first || !last) {
-    return 'За всё время'
+    return 'За выбранный период'
   }
 
-  return first.month === last.month
-    ? formatMonthShortTitle(first.month)
-    : `${formatMonthShortTitle(first.month)} — ${formatMonthShortTitle(last.month)}`
+  return first.label === last.label ? first.label : `${first.label} — ${last.label}`
 })
 const maxAmount = computed(() => Math.max(...props.points.map(point => point.amount), 0))
 const maxIndex = computed(() =>
@@ -91,9 +86,7 @@ const chartMaxValue = computed(() => Math.max(maxAmount.value, props.average, 1)
 const plotWidth = computed(() => chartWidth - chartPlotLeft - chartPlotRight)
 const plotHeight = computed(() => chartHeight - chartPlotTop - chartPlotBottom)
 const slotWidth = computed(() => plotWidth.value / Math.max(props.points.length, 1))
-const barWidth = computed(() =>
-  Math.min(slotWidth.value * (1 - barGapRatio), maxBarWidth),
-)
+const barWidth = computed(() => Math.min(slotWidth.value * (1 - barGapRatio), maxBarWidth))
 const averageY = computed(() => getBarY(props.average))
 const labelStep = computed(() => Math.ceil(props.points.length / maxLabelCount))
 
