@@ -75,7 +75,7 @@
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod } from '@/types'
-import { getMonthKey, isValidDate, shiftMonthKey } from '@/utils/date'
+import { getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatPercent } from '@/utils/formatters'
 
 type TrendPoint = {
@@ -103,8 +103,8 @@ const chartPlotBottom = 48
 const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 
 const previousMonthKey = computed(() => shiftMonthKey(props.selectedMonthKey, -1))
-const selectedYear = computed(() => Number(props.selectedMonthKey.slice(0, 4)))
-const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
+const selectedYear = computed(() => parseMonthKey(props.selectedMonthKey).year)
+const currentYear = computed(() => parseMonthKey(store.currentMonthKey).year)
 const selectedMonthTitle = computed(() => formatMonthTitle(props.selectedMonthKey))
 const trendData = computed(() =>
   props.period === 'year'

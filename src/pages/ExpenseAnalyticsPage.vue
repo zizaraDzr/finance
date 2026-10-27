@@ -123,7 +123,7 @@ import { useLoadMore } from '@/composables/useLoadMore'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod, Operation } from '@/types'
 import { toggleSetMember } from '@/utils/collections'
-import { getMonthKey, isValidDate, shiftMonthKey } from '@/utils/date'
+import { createMonthKey, getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatOperationsCount, formatPercent } from '@/utils/formatters'
 import { buildCategoryBreakdown } from '@/utils/operations'
 import { readExpensePeriod, readMonthQuery } from '@/utils/routeQuery'
@@ -154,10 +154,10 @@ const analyticsPeriodOptions: Array<{ value: ExpensePeriod; label: string }> = [
 const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
 const nextMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, 1))
-const selectedYear = computed(() => Number(selectedMonthKey.value.slice(0, 4)))
-const selectedMonthNumber = computed(() => Number(selectedMonthKey.value.slice(5, 7)))
-const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
-const currentMonthNumber = computed(() => Number(store.currentMonthKey.slice(5, 7)))
+const selectedYear = computed(() => parseMonthKey(selectedMonthKey.value).year)
+const selectedMonthNumber = computed(() => parseMonthKey(selectedMonthKey.value).month)
+const currentYear = computed(() => parseMonthKey(store.currentMonthKey).year)
+const currentMonthNumber = computed(() => parseMonthKey(store.currentMonthKey).month)
 const selectedMonthTitle = computed(() => formatMonthTitle(selectedMonthKey.value))
 const analyticsPeriod = computed<ExpensePeriod>(() => readExpensePeriod(route.query.expensePeriod))
 const selectedPeriodTitle = computed(() =>
@@ -277,10 +277,6 @@ function toggleCategory(key: string) {
 
 function isCategoryOpen(key: string) {
   return openedCategories.value.has(key)
-}
-
-function createMonthKey(year: number, month: number) {
-  return `${year}-${String(month).padStart(2, '0')}`
 }
 
 function buildExpenseGroups(operations: Operation[], total: number): ExpenseCategoryGroup[] {

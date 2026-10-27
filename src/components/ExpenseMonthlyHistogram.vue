@@ -92,7 +92,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
-import { isValidDate } from '@/utils/date'
+import { isValidDate, parseMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle } from '@/utils/formatters'
 
 type MonthlyExpense = {
@@ -133,8 +133,8 @@ const monthLabels = [
 ]
 const barGapRatio = 0.38
 
-const currentYear = computed(() => Number(store.currentMonthKey.slice(0, 4)))
-const currentMonthNumber = computed(() => Number(store.currentMonthKey.slice(5, 7)))
+const currentYear = computed(() => parseMonthKey(store.currentMonthKey).year)
+const currentMonthNumber = computed(() => parseMonthKey(store.currentMonthKey).month)
 const monthlyExpenses = computed<MonthlyExpense[]>(() => {
   const amounts = Array.from({ length: 12 }, () => 0)
 

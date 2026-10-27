@@ -22,14 +22,30 @@ export function createOperationDate(value: string) {
   )
 }
 
+export function createMonthKey(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+export function parseMonthKey(monthKey: string) {
+  const [yearPart, monthPart] = monthKey.split('-').map(Number)
+
+  return {
+    year: toNumber(yearPart, 0),
+    month: toNumber(monthPart, 1),
+  }
+}
+
+function toNumber(value: number | undefined, fallback: number) {
+  return value === undefined || Number.isNaN(value) ? fallback : value
+}
+
 export function getMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  return createMonthKey(date.getFullYear(), date.getMonth() + 1)
 }
 
 export function shiftMonthKey(monthKey: string, offset: number) {
-  const [year, month] = monthKey.split('-').map(Number)
-  const date = new Date(year || 0, (month || 1) - 1 + offset, 1)
-  return getMonthKey(date)
+  const { year, month } = parseMonthKey(monthKey)
+  return getMonthKey(new Date(year, month - 1 + offset, 1))
 }
 
 export function getOperationPeriodKey(date: Date, period: OperationsPeriod) {
@@ -71,6 +87,6 @@ export function isValidMonthKey(value: string | null): value is string {
     return false
   }
 
-  const [, month] = value.split('-').map(Number)
-  return Boolean(month && month >= 1 && month <= 12)
+  const { month } = parseMonthKey(value)
+  return month >= 1 && month <= 12
 }

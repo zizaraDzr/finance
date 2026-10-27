@@ -1,5 +1,5 @@
 import type { OperationsPeriod } from '@/types'
-import { getEndOfWeek, getMonthKey, getStartOfWeek } from '@/utils/date'
+import { getEndOfWeek, getMonthKey, getStartOfWeek, parseMonthKey } from '@/utils/date'
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>()
 const percentFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 })
@@ -75,8 +75,8 @@ export function formatOperationTime(value: string) {
 }
 
 export function formatMonthTitle(monthKey: string) {
-  const [year, month] = monthKey.split('-').map(Number)
-  const date = new Date(year || 0, (month || 1) - 1, 1)
+  const { year, month } = parseMonthKey(monthKey)
+  const date = new Date(year, month - 1, 1)
 
   return capitalizeFirstLetter(monthTitleFormatter.format(date))
 }

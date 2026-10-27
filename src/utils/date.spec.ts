@@ -1,17 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createMonthKey,
   formatDateInput,
   getEndOfWeek,
   getMonthKey,
   getOperationPeriodKey,
   getStartOfWeek,
   isValidMonthKey,
+  parseMonthKey,
   shiftMonthKey,
 } from '@/utils/date'
 
 describe('date helpers', () => {
   it('formats month keys', () => {
     expect(getMonthKey(new Date(2026, 0, 5, 12))).toBe('2026-01')
+  })
+
+  it('parses and builds month keys', () => {
+    expect(parseMonthKey('2026-10')).toEqual({ year: 2026, month: 10 })
+    expect(createMonthKey(2026, 10)).toBe('2026-10')
+    expect(createMonthKey(2026, 3)).toBe('2026-03')
   })
 
   it('shifts month keys across year boundaries', () => {
