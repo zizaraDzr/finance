@@ -15,7 +15,7 @@ const options = {
   cert: readTlsFile(tlsCertPath, 'TLS_CERT_PATH'),
 }
 
-const port = Number(process.env.PORT || 4173)
+const port = Number(4173)
 const syncToken = process.env.SYNC_TOKEN || ''
 const distDir = path.join(rootDir, 'dist')
 const defaultDataFile = path.join(rootDir, 'default.json')
@@ -24,6 +24,17 @@ const financeDataFile = process.env.FINANCE_DATA_FILE
   : path.join(rootDir, 'data', 'finance-data.json')
 
 const server = createServer(options, async (request, response) => {
+  const startedAt = Date.now()
+
+  // Без лога непонятно, что именно запрашивает телефон и что получает в ответ.
+  response.on('finish', () => {
+    const contentType = response.getHeader('content-type') || 'no Content-Type'
+    const client = request.socket.remoteAddress || 'unknown'
+    console.log(
+      `${new Date().toISOString()} ${client} ${request.method} ${request.url} -> ${response.statusCode} (${contentType}, ${Date.now() - startedAt}ms)`,
+    )
+  })
+
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
 
@@ -160,23 +171,46 @@ async function serveStaticFile(requestPath, response) {
   const filePath = getStaticFilePath(requestPath)
   const fileStats = await stat(filePath).catch(() => null)
 
-  if (!fileStats || !fileStats.isFile()) {
-    createReadStream(path.join(distDir, 'index.html'))
-      .on('error', () => sendJson(response, 404, { error: 'Not found' }))
-      .pipe(response)
+  if (fileStats && fileStats.isFile()) {
+    response.writeHead(200, {
+      'Content-Type': getContentType(filePath),
+    })
+    createReadStream(filePath).pipe(response)
+    return
+  }
+
+  // Путь с расширением (.js, .css, .png) — это ассет, а не маршрут SPA.
+  // Для него надо честно отдавать 404: иначе браузер получает index.html
+  // вместо скрипта и страница молча остаётся белой без внятной ошибки.
+  if (isAssetRequest(requestPath)) {
+    sendJson(response, 404, { error: 'Not found' })
+    return
+  }
+
+  const indexFile = path.join(distDir, 'index.html')
+  const indexStats = await stat(indexFile).catch(() => null)
+
+  if (!indexStats || !indexStats.isFile()) {
+    sendJson(response, 404, { error: 'Сборка не найдена. Сначала выполните npm run build.' })
     return
   }
 
   response.writeHead(200, {
-    'Content-Type': getContentType(filePath),
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-cache',
   })
-  createReadStream(filePath).pipe(response)
+  createReadStream(indexFile).pipe(response)
+}
+
+function isAssetRequest(requestPath) {
+  const pathWithoutQuery = requestPath.split('?')[0] || ''
+  return path.extname(pathWithoutQuery) !== ''
 }
 
 function getStaticFilePath(requestPath) {
   const normalizedPath = decodeURIComponent(requestPath.split('?')[0] || '/')
-  const safePath = path.normalize(normalizedPath).replace(/^(\.\.[/\\])+/, '')
-  const filePath = path.join(distDir, safePath === '/' ? 'index.html' : safePath)
+  const relativePath = normalizedPath === '/' ? 'index.html' : normalizedPath.replace(/^[/\\]+/, '')
+  const filePath = path.join(distDir, relativePath)
 
   if (!filePath.startsWith(distDir)) {
     return path.join(distDir, 'index.html')

@@ -18,7 +18,7 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       manifest: {
         id: '/',
         name: 'Личный бюджет',

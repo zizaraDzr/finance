@@ -10,13 +10,32 @@
 
 import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync, renameSync, rmSync } from 'node:fs'
+import { networkInterfaces } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
 const projectRoot = process.cwd()
 const certPath = path.join(projectRoot, 'selfsigned.crt')
 const keyPath = path.join(projectRoot, 'selfsigned.key')
-const hosts = ['localhost', '127.0.0.1', '::1']
+
+function getLanAddresses() {
+  return Object.values(networkInterfaces())
+    .flat()
+    .filter(address => address && address.family === 'IPv4' && !address.internal)
+    .map(address => address.address)
+}
+
+function isIpAddress(value) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(value) || value.includes(':')
+}
+
+const extraHosts = (process.env.CERT_HOSTS || '')
+  .split(/[\s,]+/)
+  .filter(Boolean)
+
+// LAN-адреса добавляются автоматически, иначе с телефона по https://192.168.x.x
+// браузер ругается на несовпадение имени сертификата с адресом.
+const hosts = [...new Set(['localhost', '127.0.0.1', '::1', ...getLanAddresses(), ...extraHosts])]
 const days = process.env.CERT_DAYS || '365'
 const force = process.argv.includes('--force')
 
@@ -79,7 +98,9 @@ function generateWithOpenSSL() {
     '-subj',
     '/CN=localhost',
     '-addext',
-    'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1',
+    `subjectAltName=${hosts
+      .map(host => `${isIpAddress(host) ? 'IP' : 'DNS'}:${host}`)
+      .join(',')}`,
   ])
 }
 
@@ -119,4 +140,5 @@ try {
 console.log('')
 console.log(`Сертификат: ${certPath}`)
 console.log(`Ключ:       ${keyPath}`)
+console.log(`Покрытые адреса: ${hosts.join(', ')}`)
 console.log('Оба файла в .gitignore — коммитить их не нужно.')

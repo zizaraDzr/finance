@@ -1,37 +1,19 @@
 <template>
   <main class="app-shell">
     <RouterView v-if="isReady" />
-
-    <aside v-if="needRefresh" class="update-widget" role="status" aria-live="polite">
-      <div>
-        <strong>Доступна новая версия</strong>
-        <p>{{ isUpdating ? 'Обновляем приложение. Подождите немного.' : 'Можно обновить приложение сейчас.' }}</p>
-      </div>
-
-      <div class="update-widget__actions">
-        <button class="update-widget__button update-widget__button--primary" type="button" :disabled="isUpdating" @click="updateApp">
-          {{ isUpdating ? 'Обновление' : 'Обновить' }}
-        </button>
-        <button class="update-widget__button" type="button" :disabled="isUpdating" @click="dismissUpdate">
-          Позже
-        </button>
-      </div>
-    </aside>
   </main>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRegisterSW } from 'virtual:pwa-register/vue'
 import { RouterView } from 'vue-router'
-import defaultData from '../default.json'
+import defaultSnapshotJson from '../default.json'
 import { fetchServerFinanceSnapshot } from '@/services/financeSync'
+import type { FinanceData } from '@/storage/financeDb'
 import { useFinanceStore } from '@/stores/finance'
 
 const store = useFinanceStore()
 const isReady = ref(false)
-const isUpdating = ref(false)
-const { needRefresh, updateServiceWorker } = useRegisterSW()
 
 onMounted(async () => {
   const hasStoredData = await store.loadFromIndexedDB()
@@ -42,7 +24,7 @@ onMounted(async () => {
     if (serverSnapshot) {
       await store.saveSnapshotToIndexedDB(serverSnapshot)
     } else {
-      store.loadData(defaultData)
+      store.loadData(toFinanceData(defaultSnapshotJson))
       await store.saveToIndexedDB()
     }
   }
@@ -50,25 +32,24 @@ onMounted(async () => {
   isReady.value = true
 })
 
+// default.json встречается в двух видах: «голые» данные (FinanceData) и снапшот
+// с обёрткой { data, updatedAt } (как его отдаёт сервер и сохраняет экспорт).
+// Приводим оба варианта к FinanceData, иначе данные молча теряются.
+function toFinanceData(value: unknown): FinanceData {
+  const candidate = value as { data?: FinanceData } | null
+
+  if (candidate && typeof candidate === 'object' && candidate.data) {
+    return candidate.data
+  }
+
+  return (value ?? {}) as FinanceData
+}
+
 async function loadServerSnapshot() {
   try {
     return await fetchServerFinanceSnapshot()
   } catch {
     return null
   }
-}
-
-async function updateApp() {
-  isUpdating.value = true
-
-  try {
-    await updateServiceWorker(true)
-  } finally {
-    isUpdating.value = false
-  }
-}
-
-function dismissUpdate() {
-  needRefresh.value = false
 }
 </script>
