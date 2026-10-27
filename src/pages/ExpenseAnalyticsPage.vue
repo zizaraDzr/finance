@@ -119,6 +119,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ExpenseMonthlyHistogram from '@/components/ExpenseMonthlyHistogram.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
+import { useLoadMore } from '@/composables/useLoadMore'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod, Operation } from '@/types'
 import { toggleSetMember } from '@/utils/collections'
@@ -144,7 +145,6 @@ const route = useRoute()
 const router = useRouter()
 const openedCategories = ref(new Set<string>())
 const expenseGroupsPreviewCount = 3
-const isAllExpenseGroupsVisible = ref(false)
 
 const analyticsPeriodOptions: Array<{ value: ExpensePeriod; label: string }> = [
   { value: 'month', label: 'Месяц' },
@@ -212,16 +212,16 @@ const expenseOperations = computed(() =>
 )
 const totalExpense = computed(() => expenseOperations.value.reduce((sum, operation) => sum + operation.sum, 0))
 const expenseGroups = computed(() => buildExpenseGroups(expenseOperations.value, totalExpense.value))
-const visibleExpenseGroups = computed(() =>
-  isAllExpenseGroupsVisible.value ? expenseGroups.value : expenseGroups.value.slice(0, expenseGroupsPreviewCount),
-)
-const hiddenExpenseGroupsCount = computed(() =>
-  Math.max(expenseGroups.value.length - visibleExpenseGroups.value.length, 0),
-)
+const {
+  visibleItems: visibleExpenseGroups,
+  hiddenCount: hiddenExpenseGroupsCount,
+  showAll: showAllExpenseGroups,
+  reset: resetExpenseGroupsVisibility,
+} = useLoadMore(() => expenseGroups.value, () => expenseGroupsPreviewCount)
 
 watch([selectedMonthKey, analyticsPeriod], () => {
   openedCategories.value = new Set()
-  isAllExpenseGroupsVisible.value = false
+  resetExpenseGroupsVisibility()
 })
 
 function goHome() {
@@ -277,10 +277,6 @@ function toggleCategory(key: string) {
 
 function isCategoryOpen(key: string) {
   return openedCategories.value.has(key)
-}
-
-function showAllExpenseGroups() {
-  isAllExpenseGroupsVisible.value = true
 }
 
 function createMonthKey(year: number, month: number) {

@@ -118,8 +118,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import OperationListItem from '@/components/OperationListItem.vue'
+import { useLoadMore } from '@/composables/useLoadMore'
 import type { Operation, OperationPeriodGroup, OperationsPeriod, Subcategory } from '@/types'
 import { toggleSetMember } from '@/utils/collections'
 import { formatMoney, formatOperationDateTime, formatOperationTime, formatOperationsCount } from '@/utils/formatters'
@@ -139,25 +140,15 @@ defineEmits<{
 
 const openedAccordions = ref(new Set<string>())
 const dayOperationsPageSize = 40
-const visibleDayOperationsCount = ref(dayOperationsPageSize)
-const visibleDayOperations = computed(() => props.group.operations.slice(0, visibleDayOperationsCount.value))
-const hiddenDayOperationsCount = computed(() =>
-  Math.max(props.group.operations.length - visibleDayOperations.value.length, 0),
-)
-const nextDayOperationsCount = computed(() =>
-  Math.min(dayOperationsPageSize, hiddenDayOperationsCount.value),
-)
+const {
+  visibleItems: visibleDayOperations,
+  hiddenCount: hiddenDayOperationsCount,
+  nextCount: nextDayOperationsCount,
+  loadMore: showMoreDayOperations,
+  reset: resetDayOperationsPagination,
+} = useLoadMore(() => props.group.operations, () => dayOperationsPageSize)
 
-watch(
-  () => props.group.key,
-  () => {
-    visibleDayOperationsCount.value = dayOperationsPageSize
-  },
-)
-
-function showMoreDayOperations() {
-  visibleDayOperationsCount.value += dayOperationsPageSize
-}
+watch(() => props.group.key, resetDayOperationsPagination)
 
 function toggleAccordion(key: string) {
   openedAccordions.value = toggleSetMember(openedAccordions.value, key)

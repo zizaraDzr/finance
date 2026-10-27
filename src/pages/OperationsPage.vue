@@ -51,6 +51,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OperationPeriodGroup from '@/components/OperationPeriodGroup.vue'
 import PeriodSwitch from '@/components/PeriodSwitch.vue'
+import { useLoadMore } from '@/composables/useLoadMore'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation, OperationTypeFilter, OperationsPeriod } from '@/types'
 import { getMonthKey } from '@/utils/date'
@@ -67,7 +68,6 @@ const operationGroupPageSizes: Record<OperationsPeriod, number> = {
   month: 12,
   year: 12,
 }
-const visibleOperationGroupsCount = ref(operationGroupPageSizes.day)
 const isDeleting = ref(false)
 
 const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
@@ -84,21 +84,17 @@ const operationGroups = computed(() =>
   }),
 )
 const operationGroupsPageSize = computed(() => operationGroupPageSizes[operationsPeriod.value])
-const visibleOperationGroups = computed(() => operationGroups.value.slice(0, visibleOperationGroupsCount.value))
-const hiddenOperationGroupsCount = computed(() =>
-  Math.max(operationGroups.value.length - visibleOperationGroups.value.length, 0),
-)
-const nextOperationGroupsCount = computed(() =>
-  Math.min(operationGroupsPageSize.value, hiddenOperationGroupsCount.value),
-)
+const {
+  visibleItems: visibleOperationGroups,
+  hiddenCount: hiddenOperationGroupsCount,
+  nextCount: nextOperationGroupsCount,
+  loadMore: showMoreOperationGroups,
+  reset: resetOperationGroupsPagination,
+} = useLoadMore(() => operationGroups.value, () => operationGroupsPageSize.value)
 
-watch(
-  [operationsPeriod, operationType, selectedMonthKey],
-  ([period]) => {
-    visibleOperationGroupsCount.value = operationGroupPageSizes[period]
-  },
-  { immediate: true },
-)
+watch([operationsPeriod, operationType, selectedMonthKey], resetOperationGroupsPagination, {
+  immediate: true,
+})
 
 function goHome() {
   router.push({
@@ -129,10 +125,6 @@ function setOperationType(type: OperationTypeFilter) {
       type,
     },
   })
-}
-
-function showMoreOperationGroups() {
-  visibleOperationGroupsCount.value += operationGroupsPageSize.value
 }
 
 function openEditPage(operation: Operation) {
