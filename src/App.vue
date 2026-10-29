@@ -1,6 +1,6 @@
 <template>
   <main class="app-shell">
-    <p class="app-version">v{{ appVersion }}</p>
+    <AppVersion />
     <RouterView v-if="isReady" />
   </main>
 </template>
@@ -8,13 +8,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
-import packageJson from '../package.json'
 import defaultSnapshotJson from '../default.json'
+import AppVersion from '@/components/AppVersion.vue'
 import { fetchServerFinanceSnapshot } from '@/services/financeSync'
 import type { FinanceData } from '@/storage/financeDb'
 import { useFinanceStore } from '@/stores/finance'
 
-const appVersion = packageJson.version
 const store = useFinanceStore()
 const isReady = ref(false)
 
