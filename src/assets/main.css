@@ -39,6 +39,20 @@ button {
     calc(40px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
 }
 
+/* Блеклая подпись версии в самом верху: не мешает контенту и не ловит тапы. */
+.app-version {
+  width: min(1120px, 100%);
+  margin: 0 auto 10px;
+  color: rgba(216, 199, 255, 0.4);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-align: right;
+  user-select: none;
+  pointer-events: none;
+}
+
 .dashboard,
 .add-page,
 .operations-page,
