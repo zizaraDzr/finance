@@ -12,7 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.ts', 'server/**/*.spec.mjs'],
     restoreMocks: true,
   },
 })

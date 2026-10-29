@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { createReadStream, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { backupBeforeWrite, parseBackupLimit } from './backups.mjs'
 
 const rootDir = process.cwd()
 loadEnvFile(path.join(rootDir, '.env'))
@@ -22,6 +23,7 @@ const defaultDataFile = path.join(rootDir, 'default.json')
 const financeDataFile = process.env.FINANCE_DATA_FILE
   ? path.resolve(rootDir, process.env.FINANCE_DATA_FILE)
   : path.join(rootDir, 'data', 'finance-data.json')
+const backupLimit = parseBackupLimit(process.env.BACKUP_LIMIT)
 
 const server = createServer(options, async (request, response) => {
   const startedAt = Date.now()
@@ -53,6 +55,7 @@ const server = createServer(options, async (request, response) => {
 server.listen(port, () => {
   console.log(`Budget server is running at https://localhost:${port}`)
   console.log(`Finance data file: ${financeDataFile}`)
+  console.log(`Backups: keep the last ${backupLimit} copies`)
 
   if (!syncToken) {
     console.warn('SYNC_TOKEN is empty. Set it in .env before using the sync endpoint.')
@@ -139,6 +142,8 @@ async function writeFinanceSnapshot(snapshot) {
   const body = `${JSON.stringify(snapshot, null, 2)}\n`
 
   await mkdir(directory, { recursive: true })
+  // Копия до записи: если бэкап не удался, старые данные остаются нетронутыми.
+  await backupBeforeWrite(financeDataFile, { limit: backupLimit })
   await writeFile(tempFile, body, 'utf8')
   await rename(tempFile, financeDataFile)
 }
