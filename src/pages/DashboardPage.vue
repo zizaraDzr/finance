@@ -100,6 +100,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import OperationListItem from '@/components/OperationListItem.vue'
+import { requestAppUpdate } from '@/services/appUpdate'
 import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
 import { getMonthKey, shiftMonthKey } from '@/utils/date'
@@ -194,6 +195,11 @@ async function syncData() {
     syncMessage.value = 'Ошибка синхронизации'
   } finally {
     isSyncing.value = false
+  }
+
+  // Новую версию приложения просим только по этой кнопке.
+  if (await requestAppUpdate()) {
+    location.reload()
   }
 }
 </script>
