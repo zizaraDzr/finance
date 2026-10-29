@@ -99,6 +99,7 @@ node server/index.mjs
 - принимает `PUT /api/finance-data`;
 - хранит актуальную копию в `data/finance-data.json`;
 - перед каждой перезаписью кладет рядом `data/finance-data.backup.<время>.json` и хранит последние 10 копий (`BACKUP_LIMIT`);
+- отправляет свежий снимок на Яндекс Диск по WebDAV, если заданы `YANDEX_WEBDAV_USER` и `YANDEX_WEBDAV_PASSWORD` (папка `YANDEX_BACKUP_PATH`, по умолчанию `Documents/finance_backup`, хранятся последние `YANDEX_BACKUP_LIMIT` копий);
 - не перезаписывает более свежую серверную копию устаревшими локальными данными.
 
 Кнопка "Синхронизировать" сравнивает `updatedAt` локальной IndexedDB и серверной копии. Более свежая сторона становится источником истины.

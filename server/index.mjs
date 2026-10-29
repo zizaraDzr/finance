@@ -5,6 +5,8 @@ import { createReadStream, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { backupBeforeWrite, parseBackupLimit } from './backups.mjs'
+import { readCloudBackupConfig, uploadSnapshot } from './cloudBackup.mjs'
+import { createWebdavRequest } from './webdav.mjs'
 
 const rootDir = process.cwd()
 loadEnvFile(path.join(rootDir, '.env'))
@@ -24,6 +26,9 @@ const financeDataFile = process.env.FINANCE_DATA_FILE
   ? path.resolve(rootDir, process.env.FINANCE_DATA_FILE)
   : path.join(rootDir, 'data', 'finance-data.json')
 const backupLimit = parseBackupLimit(process.env.BACKUP_LIMIT)
+const cloudConfig = readCloudBackupConfig(process.env)
+const cloudRequest = cloudConfig.enabled ? createWebdavRequest(cloudConfig) : null
+let cloudQueue = Promise.resolve()
 
 const server = createServer(options, async (request, response) => {
   const startedAt = Date.now()
@@ -56,6 +61,12 @@ server.listen(port, () => {
   console.log(`Budget server is running at https://localhost:${port}`)
   console.log(`Finance data file: ${financeDataFile}`)
   console.log(`Backups: keep the last ${backupLimit} copies`)
+
+  console.log(
+    cloudConfig.enabled
+      ? `Cloud backup: ${cloudConfig.directory} (keep the last ${cloudConfig.limit})`
+      : 'Cloud backup: disabled (YANDEX_WEBDAV_USER / YANDEX_WEBDAV_PASSWORD are empty)',
+  )
 
   if (!syncToken) {
     console.warn('SYNC_TOKEN is empty. Set it in .env before using the sync endpoint.')
@@ -151,6 +162,24 @@ async function writeFinanceSnapshot(snapshot) {
 
   await writeFile(tempFile, body, 'utf8')
   await rename(tempFile, financeDataFile)
+
+  queueCloudBackup()
+}
+
+function queueCloudBackup() {
+  if (!cloudRequest) {
+    return
+  }
+
+  // Выгрузки идут по одной: Яндекс отвечает нестабильно, параллель только мешает.
+  cloudQueue = cloudQueue
+    .then(() => uploadSnapshot(financeDataFile, cloudConfig, { request: cloudRequest }))
+    .then(name => {
+      console.log(`Cloud: uploaded ${name}`)
+    })
+    .catch(error => {
+      console.error(`Cloud: failed: ${error.message}`)
+    })
 }
 
 function isAuthorized(request) {
