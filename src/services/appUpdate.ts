@@ -6,6 +6,9 @@ const UPDATE_TIMEOUT_MS = 10_000
 
 let registration: ServiceWorkerRegistration | undefined
 
+// Контроллер на момент запуска: если он сменился, страница уже устарела.
+const initialController = navigator.serviceWorker?.controller
+
 export function setServiceWorkerRegistration(value?: ServiceWorkerRegistration) {
   registration = value
 }
@@ -39,5 +42,12 @@ export async function requestAppUpdate(): Promise<boolean> {
     registration.removeEventListener('updatefound', handleUpdateFound)
   }
 
-  return updateFound && (await controllerChanged)
+  const updated = updateFound && (await controllerChanged)
+
+  // Новый worker мог активироваться сразу после запуска приложения: обновления
+  // «сейчас» уже нет, но открытая страница всё ещё отдана старым build.
+  const pageIsStale =
+    Boolean(initialController) && navigator.serviceWorker.controller !== initialController
+
+  return updated || pageIsStale
 }
