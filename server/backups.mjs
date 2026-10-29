@@ -14,11 +14,12 @@ export function parseBackupLimit(value) {
 }
 
 export function backupFileName(date) {
-  // Двоеточия и точки в имени файла ломают Windows, поэтому меняем их на дефисы.
-  // Формат фиксированной ширины: лексикографическая сортировка = хронологическая.
-  const stamp = date.toISOString().replace(/[:.]/g, '-')
+  // Местное время: имя читает человек, поэтому в UTC не переводим.
+  // Двоеточия и точки в имени файла ломают Windows — разделители дефисы.
+  const day = [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-')
+  const time = [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join('-')
 
-  return `${BACKUP_PREFIX}${stamp}.json`
+  return `${BACKUP_PREFIX}${day}T${time}-${pad(date.getMilliseconds(), 3)}.json`
 }
 
 export async function backupBeforeWrite(
@@ -39,19 +40,33 @@ export async function backupBeforeWrite(
 }
 
 export async function pruneBackups(directory, limit) {
-  const backups = (await readdir(directory)).filter(isBackupFile).sort()
+  const names = (await readdir(directory)).filter(isBackupFile)
+  const backups = await Promise.all(
+    names.map(async (name) => ({
+      name,
+      modifiedAt: (await stat(path.join(directory, name))).mtimeMs,
+    })),
+  )
   const excess = backups.length - limit
 
   if (excess <= 0) {
     return []
   }
 
-  // Имена сортируются по времени, поэтому лишние — всегда самые старые.
-  const removed = backups.slice(0, excess)
+  // Порядок задаёт файловая система, а не имя: местное время при переводе
+  // часов может идти не по порядку.
+  const removed = backups
+    .sort((left, right) => left.modifiedAt - right.modifiedAt)
+    .slice(0, excess)
+    .map((backup) => backup.name)
 
   await Promise.all(removed.map((name) => unlink(path.join(directory, name))))
 
   return removed
+}
+
+function pad(value, length = 2) {
+  return String(value).padStart(length, '0')
 }
 
 function isBackupFile(name) {

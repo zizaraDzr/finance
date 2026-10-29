@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { backupBeforeWrite, backupFileName, parseBackupLimit } from './backups.mjs'
+import { backupBeforeWrite, backupFileName, parseBackupLimit, pruneBackups } from './backups.mjs'
 
 const LIVE_FILE = 'finance-data.json'
 const temporaryDirectories = []
@@ -32,10 +32,16 @@ afterEach(async () => {
 })
 
 describe('backups', () => {
+  it('builds a human-readable local file name', () => {
+    expect(backupFileName(new Date(2026, 9, 29, 19, 35, 10, 998))).toBe(
+      'finance-data.backup.2026-10-29T19-35-10-998.json',
+    )
+  })
+
   it('keeps a copy of the previous file next to the live one', async () => {
     const directory = await createDirectory()
     const livePath = await writeLiveFile(directory, '{"data":{"sum":1}}')
-    const now = new Date('2026-10-29T16:02:34.567Z')
+    const now = new Date(2026, 9, 29, 19, 35, 10, 998)
 
     const backupPath = await backupBeforeWrite(livePath, { now })
 
@@ -53,24 +59,44 @@ describe('backups', () => {
     expect(await listFiles(directory)).toEqual([])
   })
 
-  it('keeps only the newest copies and never removes the live file', async () => {
+  it('removes the oldest copies and never touches the live file', async () => {
     const directory = await createDirectory()
-    const livePath = await writeLiveFile(directory)
-    const older = new Date('2026-10-29T10:00:00.000Z')
-    const middle = new Date('2026-10-29T11:00:00.000Z')
-    const newest = new Date('2026-10-29T12:00:00.000Z')
+    await writeLiveFile(directory, '{"data":{}}')
 
-    for (const now of [older, middle, newest]) {
-      await backupBeforeWrite(livePath, { limit: 2, now })
+    const oldest = new Date(2026, 9, 29, 10, 0, 0)
+    const middle = new Date(2026, 9, 29, 11, 0, 0)
+    const newest = new Date(2026, 9, 29, 12, 0, 0)
+
+    for (const [date, content] of [
+      [oldest, 'old'],
+      [middle, 'middle'],
+      [newest, 'new'],
+    ]) {
+      const filePath = path.join(directory, backupFileName(date))
+      await writeFile(filePath, content, 'utf8')
+      await utimes(filePath, date, date)
     }
 
-    const files = await listFiles(directory)
+    const removed = await pruneBackups(directory, 2)
 
+    expect(removed).toEqual([backupFileName(oldest)])
+
+    const files = await listFiles(directory)
     expect(files).toHaveLength(3)
     expect(files).toContain(LIVE_FILE)
     expect(files).toContain(backupFileName(middle))
     expect(files).toContain(backupFileName(newest))
-    expect(files).not.toContain(backupFileName(older))
+  })
+
+  it('keeps no more copies than the limit while writing', async () => {
+    const directory = await createDirectory()
+    const livePath = await writeLiveFile(directory)
+
+    await backupBeforeWrite(livePath, { limit: 1, now: new Date(2026, 9, 29, 10, 0, 0) })
+    await backupBeforeWrite(livePath, { limit: 1, now: new Date(2026, 9, 29, 11, 0, 0) })
+
+    const backups = (await listFiles(directory)).filter((name) => name !== LIVE_FILE)
+    expect(backups).toHaveLength(1)
   })
 
   it('parses the backup limit from configuration', () => {
