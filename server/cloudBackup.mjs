@@ -1,28 +1,25 @@
-// Выгрузка свежего снимка данных на Яндекс Диск по WebDAV.
+// Выгрузка свежего снимка данных на Яндекс Диск по REST API.
 //
 // Локальные копии остаются на диске компьютера, облако — дополнительная
-// страховка. Яндекс отвечает нестабильно (500/ECONNRESET), поэтому загрузка
-// повторяется, а в облаке хранятся последние N копий.
+// страховка. Сеть и API нестабильны, поэтому загрузка повторяется, а в облаке
+// хранятся последние N копий.
 import { readFile } from 'node:fs/promises'
 import { backupFileName, parseBackupLimit } from './backups.mjs'
-import { ensureCollection, listFiles, removeFile, uploadFile } from './webdav.mjs'
+import { createUploadLink, ensureFolder, listFiles, removeFile, uploadContent } from './diskApi.mjs'
 
 const DEFAULT_ATTEMPTS = 3
 const DEFAULT_RETRY_DELAY_MS = 5_000
 const SNAPSHOT_PREFIX = 'finance-data.'
 
 export function readCloudBackupConfig(env = process.env) {
-  const user = env.YANDEX_WEBDAV_USER || ''
-  const password = env.YANDEX_WEBDAV_PASSWORD || ''
+  const token = env.YANDEX_OAUTH_TOKEN || ''
   const directory = (env.YANDEX_BACKUP_PATH || 'Documents/finance_backup').replace(/^\/+|\/+$/g, '')
 
   return {
-    url: env.YANDEX_WEBDAV_URL || 'https://webdav.yandex.ru',
-    user,
-    password,
+    token,
     directory,
     limit: parseBackupLimit(env.YANDEX_BACKUP_LIMIT),
-    enabled: Boolean(user && password),
+    enabled: Boolean(token),
   }
 }
 
@@ -30,7 +27,7 @@ export async function uploadSnapshot(
   filePath,
   config,
   {
-    request,
+    client,
     now = new Date(),
     attempts = DEFAULT_ATTEMPTS,
     delayMs = DEFAULT_RETRY_DELAY_MS,
@@ -47,19 +44,20 @@ export async function uploadSnapshot(
 
   await retry(
     async () => {
-      await ensureCollection(request, config.directory)
-      await uploadFile(request, target, body)
+      await ensureFolder(client, config.directory)
+      const href = await createUploadLink(client, target)
+      await uploadContent(client, href, body)
     },
     { attempts, delayMs, sleep },
   )
 
-  await pruneCloud(request, config.directory, config.limit)
+  await pruneCloud(client, config.directory, config.limit)
 
   return name
 }
 
-export async function pruneCloud(request, directory, limit) {
-  const names = (await listFiles(request, directory)).filter(isSnapshotName).sort()
+export async function pruneCloud(client, directory, limit) {
+  const names = (await listFiles(client, directory)).filter(isSnapshotName).sort()
   const excess = names.length - limit
 
   if (excess <= 0) {
@@ -68,10 +66,9 @@ export async function pruneCloud(request, directory, limit) {
 
   const removed = names.slice(0, excess)
 
-  // Удаление по WebDAV необратимо (корзины нет), поэтому по одному и только
-  // по именам снимков.
+  // Удаление необратимо, поэтому по одному и только по именам снимков.
   for (const name of removed) {
-    await removeFile(request, `${directory}/${name}`)
+    await removeFile(client, `${directory}/${name}`)
   }
 
   return removed

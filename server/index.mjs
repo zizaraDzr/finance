@@ -6,7 +6,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { backupBeforeWrite, parseBackupLimit } from './backups.mjs'
 import { readCloudBackupConfig, uploadSnapshot } from './cloudBackup.mjs'
-import { createWebdavRequest } from './webdav.mjs'
+import { createDiskClient } from './diskApi.mjs'
 
 const rootDir = process.cwd()
 loadEnvFile(path.join(rootDir, '.env'))
@@ -27,7 +27,7 @@ const financeDataFile = process.env.FINANCE_DATA_FILE
   : path.join(rootDir, 'data', 'finance-data.json')
 const backupLimit = parseBackupLimit(process.env.BACKUP_LIMIT)
 const cloudConfig = readCloudBackupConfig(process.env)
-const cloudRequest = cloudConfig.enabled ? createWebdavRequest(cloudConfig) : null
+const cloudClient = cloudConfig.enabled ? createDiskClient({ token: cloudConfig.token }) : null
 let cloudQueue = Promise.resolve()
 
 const server = createServer(options, async (request, response) => {
@@ -65,7 +65,7 @@ server.listen(port, () => {
   console.log(
     cloudConfig.enabled
       ? `Cloud backup: ${cloudConfig.directory} (keep the last ${cloudConfig.limit})`
-      : 'Cloud backup: disabled (YANDEX_WEBDAV_USER / YANDEX_WEBDAV_PASSWORD are empty)',
+      : 'Cloud backup: disabled (YANDEX_OAUTH_TOKEN is empty)',
   )
 
   if (!syncToken) {
@@ -167,13 +167,13 @@ async function writeFinanceSnapshot(snapshot) {
 }
 
 function queueCloudBackup() {
-  if (!cloudRequest) {
+  if (!cloudClient) {
     return
   }
 
-  // Выгрузки идут по одной: Яндекс отвечает нестабильно, параллель только мешает.
+  // Выгрузки идут по одной: API отвечает нестабильно, параллель только мешает.
   cloudQueue = cloudQueue
-    .then(() => uploadSnapshot(financeDataFile, cloudConfig, { request: cloudRequest }))
+    .then(() => uploadSnapshot(financeDataFile, cloudConfig, { client: cloudClient }))
     .then(name => {
       console.log(`Cloud: uploaded ${name}`)
     })

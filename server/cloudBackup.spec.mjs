@@ -6,31 +6,33 @@ import { backupFileName } from './backups.mjs'
 import { pruneCloud, readCloudBackupConfig, uploadSnapshot } from './cloudBackup.mjs'
 
 const DIRECTORY = 'Documents/finance_backup'
+const UPLOAD_HREF = 'https://uploader.example/1'
 const temporaryDirectories = []
 
-function createRequest(handler) {
-  const calls = []
-  const request = async (method, path, options = {}) => {
-    calls.push({ method, path, options })
-    return handler(method, path, options)
+function createClient({ api, request = () => ({ status: 201, body: '' }) }) {
+  const calls = { api: [], request: [] }
+  const client = {
+    api: async (method, apiPath, options = {}) => {
+      calls.api.push({ method, path: apiPath, options })
+      return api(method, apiPath, options)
+    },
+    request: async (url, options = {}) => {
+      calls.request.push({ url, options })
+      return request(url, options)
+    },
   }
-  request.calls = calls
-  return request
+  client.calls = calls
+  return client
 }
 
-function propfindXml(names) {
-  const responses = names
-    .map((name) => `<d:response><d:href>/${DIRECTORY}/${name}</d:href></d:response>`)
-    .join('')
-
-  return `<?xml version="1.0" encoding="UTF-8"?><d:multistatus xmlns:d="DAV:">${responses}</d:multistatus>`
+function itemsBody(names) {
+  return JSON.stringify({ _embedded: { items: names.map((name) => ({ name })) } })
 }
 
 function createConfig(overrides = {}) {
   return {
     ...readCloudBackupConfig({
-      YANDEX_WEBDAV_USER: 'user@yandex.ru',
-      YANDEX_WEBDAV_PASSWORD: 'app-password',
+      YANDEX_OAUTH_TOKEN: 'oauth-token',
       YANDEX_BACKUP_PATH: DIRECTORY,
     }),
     ...overrides,
@@ -54,20 +56,18 @@ afterEach(async () => {
 })
 
 describe('cloud backup config', () => {
-  it('is disabled without credentials', () => {
+  it('is disabled without a token', () => {
     expect(readCloudBackupConfig({})).toMatchObject({
       enabled: false,
-      url: 'https://webdav.yandex.ru',
       directory: DIRECTORY,
       limit: 10,
     })
   })
 
-  it('reads credentials, path and limit from the environment', () => {
+  it('reads the token, path and limit from the environment', () => {
     expect(
       readCloudBackupConfig({
-        YANDEX_WEBDAV_USER: 'user@yandex.ru',
-        YANDEX_WEBDAV_PASSWORD: 'app-password',
+        YANDEX_OAUTH_TOKEN: 'oauth-token',
         YANDEX_BACKUP_PATH: '/Documents/other/',
         YANDEX_BACKUP_LIMIT: '3',
       }),
@@ -86,27 +86,29 @@ describe('cloud backup upload', () => {
         `finance-data.backup.2026-10-28T10-00-00-${String(index).padStart(3, '0')}.json`,
     )
 
-    const request = createRequest((method) => {
-      if (method === 'MKCOL') return { status: 405, body: '' }
-      if (method === 'PUT') return { status: 201, body: '' }
-      if (method === 'PROPFIND') return { status: 207, body: propfindXml([...oldNames, name]) }
-      if (method === 'DELETE') return { status: 204, body: '' }
+    const client = createClient({
+      api: (method, apiPath) => {
+        if (method === 'PUT') return { status: 409, body: '' }
+        if (apiPath.startsWith('/resources/upload')) {
+          return { status: 200, body: JSON.stringify({ href: UPLOAD_HREF, method: 'PUT' }) }
+        }
+        if (method === 'GET') return { status: 200, body: itemsBody([...oldNames, name]) }
+        if (method === 'DELETE') return { status: 204, body: '' }
 
-      throw new Error(`unexpected ${method}`)
+        throw new Error(`unexpected ${method} ${apiPath}`)
+      },
     })
 
-    const uploaded = await uploadSnapshot(filePath, createConfig(), { request, now })
+    const uploaded = await uploadSnapshot(filePath, createConfig(), { client, now })
 
     expect(uploaded).toBe(name)
+    expect(client.calls.request[0].url).toBe(UPLOAD_HREF)
+    expect(client.calls.request[0].options.body.toString()).toBe(content)
 
-    const put = request.calls.find((call) => call.method === 'PUT')
-    expect(put.path).toBe(`${DIRECTORY}/${name}`)
-    expect(put.options.body.toString()).toBe(content)
-
-    const deleted = request.calls
+    const deleted = client.calls.api
       .filter((call) => call.method === 'DELETE')
-      .map((call) => call.path)
-    expect(deleted).toEqual(oldNames.slice(0, 3).map((oldName) => `${DIRECTORY}/${oldName}`))
+      .map((call) => decodeURIComponent(call.path))
+    expect(deleted).toEqual(oldNames.slice(0, 3).map((oldName) => expect.stringContaining(oldName)))
   })
 
   it('retries a failed upload', async () => {
@@ -115,20 +117,25 @@ describe('cloud backup upload', () => {
     const name = backupFileName(now)
     let attempts = 0
 
-    const request = createRequest((method) => {
-      if (method === 'MKCOL') return { status: 405, body: '' }
-      if (method === 'PUT') {
+    const client = createClient({
+      api: (method, apiPath) => {
+        if (method === 'PUT') return { status: 409, body: '' }
+        if (apiPath.startsWith('/resources/upload')) {
+          return { status: 200, body: JSON.stringify({ href: UPLOAD_HREF }) }
+        }
+        if (method === 'GET') return { status: 200, body: itemsBody([name]) }
+        if (method === 'DELETE') return { status: 204, body: '' }
+
+        throw new Error(`unexpected ${method} ${apiPath}`)
+      },
+      request: () => {
         attempts += 1
         return attempts === 1 ? { status: 500, body: '' } : { status: 201, body: '' }
-      }
-      if (method === 'PROPFIND') return { status: 207, body: propfindXml([name]) }
-      if (method === 'DELETE') return { status: 204, body: '' }
-
-      throw new Error(`unexpected ${method}`)
+      },
     })
     const sleep = vi.fn(async () => {})
 
-    await expect(uploadSnapshot(filePath, createConfig(), { request, now, sleep })).resolves.toBe(
+    await expect(uploadSnapshot(filePath, createConfig(), { client, now, sleep })).resolves.toBe(
       name,
     )
 
@@ -138,33 +145,43 @@ describe('cloud backup upload', () => {
 
   it('gives up after all attempts', async () => {
     const { filePath } = await writeSnapshotFile()
-    const request = createRequest((method) => {
-      if (method === 'MKCOL') return { status: 405, body: '' }
-      if (method === 'PUT') return { status: 500, body: '' }
+    const client = createClient({
+      api: (method, apiPath) => {
+        if (method === 'PUT') return { status: 409, body: '' }
+        if (apiPath.startsWith('/resources/upload')) {
+          return { status: 200, body: JSON.stringify({ href: UPLOAD_HREF }) }
+        }
 
-      throw new Error(`unexpected ${method}`)
+        throw new Error(`unexpected ${method} ${apiPath}`)
+      },
+      request: () => ({ status: 500, body: '' }),
     })
     const sleep = vi.fn(async () => {})
 
-    await expect(uploadSnapshot(filePath, createConfig(), { request, sleep })).rejects.toThrow(
+    await expect(uploadSnapshot(filePath, createConfig(), { client, sleep })).rejects.toThrow(
       'HTTP 500',
     )
 
-    expect(request.calls.filter((call) => call.method === 'PUT')).toHaveLength(3)
-    expect(request.calls.some((call) => call.method === 'PROPFIND')).toBe(false)
+    expect(client.calls.request).toHaveLength(3)
+    expect(
+      client.calls.api.some((call) => call.method === 'GET' && call.path.startsWith('/resources?')),
+    ).toBe(false)
   })
 
   it('does nothing when disabled', async () => {
     const { filePath } = await writeSnapshotFile()
-    const request = createRequest(() => {
-      throw new Error('must not be called')
+    const client = createClient({
+      api: () => {
+        throw new Error('must not be called')
+      },
     })
 
     await expect(
-      uploadSnapshot(filePath, createConfig({ enabled: false }), { request }),
+      uploadSnapshot(filePath, createConfig({ enabled: false }), { client }),
     ).resolves.toBeNull()
 
-    expect(request.calls).toHaveLength(0)
+    expect(client.calls.api).toHaveLength(0)
+    expect(client.calls.request).toHaveLength(0)
   })
 })
 
@@ -176,19 +193,23 @@ describe('cloud backup pruning', () => {
       'finance-data.backup.2026-10-29T11-00-00-000.json',
       'finance-data.backup.2026-10-29T12-00-00-000.json',
     ]
-    const request = createRequest((method) => {
-      if (method === 'PROPFIND') return { status: 207, body: propfindXml(names) }
-      if (method === 'DELETE') return { status: 204, body: '' }
+    const client = createClient({
+      api: (method, apiPath) => {
+        if (method === 'GET') return { status: 200, body: itemsBody(names) }
+        if (method === 'DELETE') return { status: 204, body: '' }
 
-      throw new Error(`unexpected ${method}`)
+        throw new Error(`unexpected ${method} ${apiPath}`)
+      },
     })
 
-    const removed = await pruneCloud(request, DIRECTORY, 1)
+    const removed = await pruneCloud(client, DIRECTORY, 1)
 
     expect(removed).toEqual([
       'finance-data.backup.2026-10-29T10-00-00-000.json',
       'finance-data.backup.2026-10-29T11-00-00-000.json',
     ])
-    expect(request.calls.some((call) => call.path.endsWith('notes.txt'))).toBe(false)
+    expect(
+      client.calls.api.some((call) => call.method === 'DELETE' && call.path.includes('notes.txt')),
+    ).toBe(false)
   })
 })
