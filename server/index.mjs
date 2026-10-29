@@ -143,7 +143,12 @@ async function writeFinanceSnapshot(snapshot) {
 
   await mkdir(directory, { recursive: true })
   // Копия до записи: если бэкап не удался, старые данные остаются нетронутыми.
-  await backupBeforeWrite(financeDataFile, { limit: backupLimit })
+  const backupPath = await backupBeforeWrite(financeDataFile, { limit: backupLimit })
+
+  if (backupPath) {
+    console.log(`Backup: ${path.basename(backupPath)}`)
+  }
+
   await writeFile(tempFile, body, 'utf8')
   await rename(tempFile, financeDataFile)
 }
