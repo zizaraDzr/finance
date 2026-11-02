@@ -106,6 +106,6 @@ node server/index.mjs
 
 ## Автозапуск сервера (Windows)
 
-Задача планировщика `Finance server` при входе в систему запускает `start-finance.vbs`. Скрипт вызывает `start-finance.cmd`, тот переходит в папку проекта и поднимает `node server/index.mjs`, дописывая вывод в `logs/server.log`. Задача перезапускает сервер при падении, без ограничения времени выполнения.
+Задача планировщика `Finance server` при входе в систему открывает видимое окно консоли и запускает в нём `start-finance.cmd`. Скрипт переходит в папку проекта и поднимает `node server/index.mjs`, так что лог сервера (`Budget server is running`, `Cloud: uploaded ...`) видно прямо в окне. Задача перезапускает сервер при падении, без ограничения времени выполнения.
 
 Проверить: `Get-ScheduledTask -TaskName "Finance server"` и `https://localhost:4173`.
