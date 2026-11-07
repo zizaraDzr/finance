@@ -53,6 +53,35 @@ button {
   pointer-events: none;
 }
 
+/* Индикатор жеста «потянуть вниз»: виден только во время вытягивания. */
+.pull-refresh {
+  position: fixed;
+  top: calc(6px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 20;
+  padding: 8px 16px;
+  border: 1px solid rgba(216, 199, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(28, 18, 42, 0.94);
+  color: #d8c7ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(var(--pull, 0px) - 64px));
+  transition: opacity 120ms ease;
+}
+
+.pull-refresh--visible {
+  opacity: 1;
+}
+
+.pull-refresh--ready {
+  border-color: rgba(141, 243, 181, 0.55);
+  color: #8df3b5;
+}
+
 .dashboard,
 .add-page,
 .operations-page,
@@ -170,6 +199,15 @@ button {
   color: #bbaaca;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.sync-button--error {
+  border-color: rgba(255, 141, 151, 0.55);
+  color: #ff8d97;
+}
+
+.sync-button--error small {
+  color: #ff8d97;
 }
 
 .add-button:hover,

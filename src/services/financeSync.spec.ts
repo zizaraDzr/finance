@@ -68,9 +68,10 @@ describe('fetchServerFinanceSnapshot', () => {
 
     await fetchServerFinanceSnapshot()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/finance-data', {
-      headers: { Authorization: 'Bearer secret' },
-    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/finance-data',
+      expect.objectContaining({ headers: { Authorization: 'Bearer secret' } }),
+    )
   })
 
   it('sends no authorization header without a token', async () => {
@@ -79,7 +80,10 @@ describe('fetchServerFinanceSnapshot', () => {
 
     await fetchServerFinanceSnapshot()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/finance-data', { headers: {} })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/finance-data',
+      expect.objectContaining({ headers: {} }),
+    )
   })
 })
 

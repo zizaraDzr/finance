@@ -29,10 +29,16 @@
           <strong>{{ formatMoney(monthBalance, store.currencySymbol) }}</strong>
         </div>
       </div>
-      <button class="sync-button" type="button" :disabled="isSyncing" @click="syncData">
-          <span>{{ isSyncing ? 'Синхронизация' : '+' }}</span>
-          <small v-if="syncMessage">{{ syncMessage }}</small>
-        </button>
+      <button
+        class="sync-button"
+        :class="{ 'sync-button--error': syncError }"
+        type="button"
+        :disabled="isSyncing"
+        @click="syncData"
+      >
+        <span>{{ isSyncing ? 'Обновление…' : 'Обновить' }}</span>
+        <small v-if="syncMessage">{{ syncMessage }}</small>
+      </button>
     </header>
 
     <section class="metrics" aria-label="Сводка доходов и расходов за месяц">
@@ -113,6 +119,7 @@ const route = useRoute()
 const router = useRouter()
 const isSyncing = ref(false)
 const syncMessage = ref('')
+const syncError = ref(false)
 
 const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const previousMonthKey = computed(() => shiftMonthKey(selectedMonthKey.value, -1))
@@ -180,6 +187,7 @@ function openExpenseAnalyticsPage() {
 async function syncData() {
   isSyncing.value = true
   syncMessage.value = ''
+  syncError.value = false
 
   try {
     const result = await syncFinanceData(store)
@@ -191,8 +199,9 @@ async function syncData() {
     } else {
       syncMessage.value = 'Все актуально'
     }
-  } catch {
-    syncMessage.value = 'Ошибка синхронизации'
+  } catch (error) {
+    syncMessage.value = describeSyncError(error)
+    syncError.value = true
   } finally {
     isSyncing.value = false
   }
@@ -201,5 +210,21 @@ async function syncData() {
   if (await requestAppUpdate()) {
     location.reload()
   }
+}
+
+function describeSyncError(error: unknown) {
+  if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+    return 'Нет связи с сервером'
+  }
+
+  if (error instanceof TypeError) {
+    return 'Нет связи с сервером'
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return 'Ошибка синхронизации'
 }
 </script>

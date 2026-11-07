@@ -1,4 +1,13 @@
 <template>
+  <div
+    class="pull-refresh"
+    :class="{ 'pull-refresh--visible': distance > 0, 'pull-refresh--ready': isPullReady }"
+    :style="{ '--pull': `${distance}px` }"
+    aria-hidden="true"
+  >
+    {{ isPullReady ? 'Отпустите, чтобы обновить' : 'Потяните вниз' }}
+  </div>
+
   <main class="app-shell">
     <AppVersion />
     <RouterView v-if="isReady" />
@@ -10,9 +19,14 @@ import { onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import defaultSnapshotJson from '../default.json'
 import AppVersion from '@/components/AppVersion.vue'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { fetchServerFinanceSnapshot } from '@/services/financeSync'
 import type { FinanceData } from '@/storage/financeDb'
 import { useFinanceStore } from '@/stores/finance'
+
+const { distance, isReady: isPullReady } = usePullToRefresh({
+  canRefresh: () => !location.pathname.startsWith('/add') && !location.pathname.startsWith('/edit'),
+})
 
 const store = useFinanceStore()
 const isReady = ref(false)

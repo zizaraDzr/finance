@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -6,6 +6,10 @@ import DashboardPage from '@/pages/DashboardPage.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { FinanceData } from '@/storage/financeDb'
 import { createAccount, createCategory, createOperation } from '@/test/fixtures'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 async function mountPage(data: FinanceData = {}) {
   const pinia = createPinia()
@@ -81,5 +85,18 @@ describe('DashboardPage', () => {
 
     expect(router.currentRoute.value.name).toBe('category-analytics')
     expect(router.currentRoute.value.query.month).toBe('2026-10')
+  })
+
+  it('shows a clear error when the server is unreachable', async () => {
+    const { wrapper } = await mountPage()
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const button = wrapper.findAll('button').find(item => item.text().includes('Обновить'))
+
+    expect(button).toBeDefined()
+    await button?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Нет связи с сервером')
   })
 })

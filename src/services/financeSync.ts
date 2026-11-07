@@ -18,9 +18,10 @@ type SyncResult =
     }
 
 const syncEndpoint = '/api/finance-data'
+const SYNC_TIMEOUT_MS = 30_000
 
 export async function fetchServerFinanceSnapshot() {
-  const response = await fetch(syncEndpoint, { headers: getAuthHeaders() })
+  const response = await fetchWithTimeout(syncEndpoint, { headers: getAuthHeaders() })
 
   if (!response.ok) {
     throw new Error('Не удалось получить данные с сервера.')
@@ -67,7 +68,7 @@ export async function syncFinanceData(store: FinanceStore): Promise<SyncResult> 
 }
 
 async function uploadFinanceSnapshot(snapshot: FinanceSnapshot) {
-  const response = await fetch(syncEndpoint, {
+  const response = await fetchWithTimeout(syncEndpoint, {
     method: 'PUT',
     headers: {
       ...getAuthHeaders(),
@@ -81,6 +82,19 @@ async function uploadFinanceSnapshot(snapshot: FinanceSnapshot) {
   }
 
   throw new Error('Не удалось сохранить данные на сервере.')
+}
+
+// Без таймаута запрос к недоступному серверу может висеть минутами:
+// кнопка «Обновить» всё это время показывает «Обновление…» без ошибки.
+async function fetchWithTimeout(url: string, init: RequestInit = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS)
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function getAuthHeaders(): HeadersInit {
