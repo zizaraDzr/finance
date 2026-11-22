@@ -613,6 +613,77 @@ h2 {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Вся строка подкатегории — кнопка: по клику раскрываются все её операции за период. */
+.expense-subcategories__toggle {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.expense-subcategories__toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.expense-subcategories__toggle:focus-visible {
+  outline: 2px solid rgba(255, 115, 127, 0.9);
+  outline-offset: 1px;
+}
+
+.expense-subcategories__toggle .accordion-chevron {
+  color: #d8c7ff;
+  font-size: 1.1rem;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.expense-subcategories__toggle--open .accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.expense-subcategories__info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.expense-subcategories__info strong {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense-subcategories__info span {
+  color: #bbaaca;
+  font-size: 0.83rem;
+}
+
+.expense-subcategories__toggle .expense-breakdown__amount {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  align-items: start;
+}
+
+.expense-subcategories__toggle .expense-breakdown__amount span {
+  color: #bbaaca;
+  font-size: 0.83rem;
+}
+
+.expense-subcategories__operations {
+  padding-left: 30px;
+}
+
 .trend-legend {
   display: flex;
   flex-wrap: wrap;

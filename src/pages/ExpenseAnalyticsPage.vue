@@ -79,21 +79,40 @@
             <div v-if="isCategoryOpen(category.key)" class="expense-subcategories">
               <article v-for="subcategory in category.subcategories" :key="subcategory.key"
                 class="expense-subcategories__item">
-                <div class="expense-breakdown__row">
-                  <div>
+                <button class="expense-subcategories__toggle" type="button"
+                  :class="{ 'expense-subcategories__toggle--open': isSubcategoryOpen(category.key, subcategory.key) }"
+                  :aria-expanded="isSubcategoryOpen(category.key, subcategory.key)"
+                  :aria-label="`${isSubcategoryOpen(category.key, subcategory.key) ? 'Скрыть' : 'Показать'} операции: ${subcategory.name}`"
+                  @click="toggleSubcategory(category.key, subcategory.key)">
+                  <span class="accordion-chevron">›</span>
+
+                  <span class="expense-subcategories__info">
                     <strong>{{ subcategory.name }}</strong>
                     <span>{{ formatOperationsCount(subcategory.count) }}</span>
-                  </div>
+                  </span>
 
-                  <div class="expense-breakdown__amount">
+                  <span class="expense-breakdown__amount">
                     <b>{{ formatMoney(subcategory.amount, store.currencySymbol) }}</b>
                     <span>{{ formatPercent(subcategory.percent) }}</span>
-                  </div>
-                </div>
+                  </span>
+                </button>
 
                 <div class="expense-share expense-share--subtle" aria-hidden="true">
                   <span :style="{ width: `${subcategory.percent}%` }"></span>
                 </div>
+
+                <ul v-if="isSubcategoryOpen(category.key, subcategory.key)"
+                  class="operation-list operation-list--compact expense-subcategories__operations">
+                  <OperationListItem
+                    v-for="operation in subcategory.operations"
+                    :key="operation.id"
+                    :operation="operation"
+                    :title="formatOperationDateTime(operation.date)"
+                    :subtitle="operation.note || undefined"
+                    :time-label="store.getCategoryName(operation.categoryID)"
+                    :amount-label="formatMoney(operation.sum, store.currencySymbol)"
+                  />
+                </ul>
               </article>
             </div>
           </section>
@@ -119,16 +138,23 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ExpenseMonthlyHistogram from '@/components/ExpenseMonthlyHistogram.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
+import OperationListItem from '@/components/OperationListItem.vue'
 import { useLoadMore } from '@/composables/useLoadMore'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod, Operation } from '@/types'
 import { toggleSetMember } from '@/utils/collections'
 import { createMonthKey, getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
-import { formatMoney, formatMonthTitle, formatOperationsCount, formatPercent } from '@/utils/formatters'
-import { buildCategoryBreakdown } from '@/utils/operations'
+import {
+  formatMoney,
+  formatMonthTitle,
+  formatOperationDateTime,
+  formatOperationsCount,
+  formatPercent,
+} from '@/utils/formatters'
+import { buildCategoryBreakdown, sortOperationsByDateDesc } from '@/utils/operations'
 import { readExpensePeriod, readMonthQuery } from '@/utils/routeQuery'
 
-type ExpenseSubcategoryGroup = {
+type ExpenseAmountGroup = {
   key: string
   name: string
   amount: number
@@ -136,7 +162,11 @@ type ExpenseSubcategoryGroup = {
   percent: number
 }
 
-type ExpenseCategoryGroup = ExpenseSubcategoryGroup & {
+type ExpenseSubcategoryGroup = ExpenseAmountGroup & {
+  operations: Operation[]
+}
+
+type ExpenseCategoryGroup = ExpenseAmountGroup & {
   subcategories: ExpenseSubcategoryGroup[]
 }
 
@@ -144,6 +174,7 @@ const store = useFinanceStore()
 const route = useRoute()
 const router = useRouter()
 const openedCategories = ref(new Set<string>())
+const openedSubcategories = ref(new Set<string>())
 const expenseGroupsPreviewCount = 3
 
 const analyticsPeriodOptions: Array<{ value: ExpensePeriod; label: string }> = [
@@ -221,6 +252,7 @@ const {
 
 watch([selectedMonthKey, analyticsPeriod], () => {
   openedCategories.value = new Set()
+  openedSubcategories.value = new Set()
   resetExpenseGroupsVisibility()
 })
 
@@ -279,6 +311,21 @@ function isCategoryOpen(key: string) {
   return openedCategories.value.has(key)
 }
 
+function toggleSubcategory(categoryKey: string, subcategoryKey: string) {
+  openedSubcategories.value = toggleSetMember(
+    openedSubcategories.value,
+    getSubcategoryToggleKey(categoryKey, subcategoryKey),
+  )
+}
+
+function isSubcategoryOpen(categoryKey: string, subcategoryKey: string) {
+  return openedSubcategories.value.has(getSubcategoryToggleKey(categoryKey, subcategoryKey))
+}
+
+function getSubcategoryToggleKey(categoryKey: string, subcategoryKey: string) {
+  return `${categoryKey}:${subcategoryKey}`
+}
+
 function buildExpenseGroups(operations: Operation[], total: number): ExpenseCategoryGroup[] {
   return buildCategoryBreakdown(operations, {
     getCategoryName: store.getCategoryName,
@@ -297,6 +344,7 @@ function buildExpenseGroups(operations: Operation[], total: number): ExpenseCate
           amount: subcategory.expense,
           count: subcategory.count,
           percent: getSharePercent(subcategory.expense, total),
+          operations: sortOperationsByDateDesc(subcategory.operations),
         }))
         .sort((first, second) => second.amount - first.amount),
     }))
