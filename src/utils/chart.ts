@@ -32,12 +32,31 @@ type PlacePointHintInput = {
   lineGap?: number
 }
 
+export type PointHint = {
+  text: string
+  pointY: number
+}
+
+export type PlacedPointHint = ChartHintPlacement & {
+  text: string
+}
+
+type PlacePointHintsInput = {
+  hints: PointHint[]
+  pointX: number
+  fontSize: number
+  area: ChartArea
+  gap?: number
+  lineGap?: number
+}
+
 // Символы в SVG-подсказках примерно в 0.56em шириной: точнее без замера текста не обойтись.
 const textWidthRatio = 0.56
 const ascentRatio = 0.78
 const descentRatio = 0.22
 const defaultGap = 8
 const defaultLineGap = 6
+const collisionLineHeightRatio = 1.2
 
 /**
  * Грубая оценка ширины подписи в пользовательских единицах SVG.
@@ -96,6 +115,68 @@ export function placePointHint(input: PlacePointHintInput): ChartHintPlacement {
     fontSize,
     area,
   })
+}
+
+/**
+ * Ставит подсказки значений рядом с одной и той же точкой и разводит те,
+ * которые иначе наложились бы друг на друга (например, текущий и прошлый период).
+ */
+export function placePointHints(input: PlacePointHintsInput): PlacedPointHint[] {
+  const placed = input.hints.map(hint => ({
+    text: hint.text,
+    ...placePointHint({
+      text: hint.text,
+      pointX: input.pointX,
+      pointY: hint.pointY,
+      fontSize: input.fontSize,
+      area: input.area,
+      gap: input.gap,
+      lineGap: input.lineGap,
+    }),
+  }))
+
+  if (placed.length !== 2) {
+    return placed
+  }
+
+  const first = placed[0]
+  const second = placed[1]
+
+  if (!first || !second || !hintsCollide(first, second, input.fontSize)) {
+    return placed
+  }
+
+  const lineHeight = input.fontSize * collisionLineHeightRatio
+  const upper = first.y <= second.y ? first : second
+  const lower = upper === first ? second : first
+  const maxY = input.area.bottom - input.fontSize * descentRatio
+  let upperY = upper.y
+  let lowerY = Math.max(lower.y, upperY + lineHeight)
+
+  if (lowerY > maxY) {
+    lowerY = maxY
+    upperY = Math.max(input.area.top + input.fontSize * ascentRatio, lowerY - lineHeight)
+  }
+
+  return placed.map(hint => (hint === upper ? { ...hint, y: upperY } : { ...hint, y: lowerY }))
+}
+
+function hintsCollide(first: PlacedPointHint, second: PlacedPointHint, fontSize: number) {
+  const firstExtents = getHintHorizontalExtents(first, fontSize)
+  const secondExtents = getHintHorizontalExtents(second, fontSize)
+  const horizontalOverlap =
+    Math.min(firstExtents.right, secondExtents.right) - Math.max(firstExtents.left, secondExtents.left) > 0
+  const verticalGap = Math.abs(first.y - second.y)
+
+  return horizontalOverlap && verticalGap < fontSize * collisionLineHeightRatio
+}
+
+function getHintHorizontalExtents(hint: PlacedPointHint, fontSize: number) {
+  const width = estimateHintWidth(hint.text, fontSize)
+  const left =
+    hint.anchor === 'start' ? hint.x : hint.anchor === 'end' ? hint.x - width : hint.x - width / 2
+
+  return { left, right: left + width }
 }
 
 function clamp(value: number, min: number, max: number) {

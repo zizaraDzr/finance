@@ -91,4 +91,23 @@ describe('ExpenseTrendChart hints', () => {
 
     expect(hint.attributes('text-anchor')).toBe('start')
   })
+
+  it('does not let the current and the previous value hints overlap', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 22, 12))
+    const { wrapper } = mountChart('2026-11', 'month', {
+      Operation: [
+        createOperation({ sum: 1000, date: new Date(2026, 10, 22, 12).toISOString() }),
+        createOperation({ sum: 900, date: new Date(2026, 9, 22, 12).toISOString() }),
+      ],
+    })
+
+    const current = wrapper.find('.trend-chart__value--current')
+    const previous = wrapper.find('.trend-chart__value--previous')
+    const currentY = Number(current.attributes('y'))
+    const previousY = Number(previous.attributes('y'))
+
+    expect(current.attributes('text-anchor')).toBe(previous.attributes('text-anchor'))
+    expect(Math.abs(currentY - previousY)).toBeGreaterThanOrEqual(23)
+  })
 })

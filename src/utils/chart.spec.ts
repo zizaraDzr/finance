@@ -3,10 +3,21 @@ import {
   estimateHintWidth,
   fitHintInArea,
   placePointHint,
+  placePointHints,
   type ChartArea,
 } from '@/utils/chart'
 
 const plotArea: ChartArea = { left: 28, right: 692, top: 34, bottom: 238 }
+
+function placePair(input: Parameters<typeof placePointHints>[0]) {
+  const [first, second] = placePointHints(input)
+
+  if (!first || !second) {
+    throw new Error('Expected exactly two placed hints')
+  }
+
+  return { first, second }
+}
 
 describe('estimateHintWidth', () => {
   it('grows with the text length and the font size', () => {
@@ -127,5 +138,69 @@ describe('placePointHint', () => {
     })
 
     expect(placement).toEqual({ anchor: 'start', x: 508, y: 52 })
+  })
+})
+
+describe('placePointHints', () => {
+  it('separates hints that would otherwise overlap near the right edge', () => {
+    const { first, second } = placePair({
+      hints: [
+        { text: '100 ₽', pointY: 190 },
+        { text: '90 ₽', pointY: 195 },
+      ],
+      pointX: 680,
+      fontSize: 10,
+      area: plotArea,
+    })
+
+    expect(first.anchor).toBe('end')
+    expect(second.anchor).toBe('end')
+    expect(second.y - first.y).toBeCloseTo(12, 5)
+    expect(second.y).toBeLessThanOrEqual(238)
+  })
+
+  it('keeps the input order when the lower label comes first', () => {
+    const { first, second } = placePair({
+      hints: [
+        { text: '90 ₽', pointY: 195 },
+        { text: '100 ₽', pointY: 190 },
+      ],
+      pointX: 680,
+      fontSize: 10,
+      area: plotArea,
+    })
+
+    expect(first.y).toBeGreaterThan(second.y)
+    expect(first.y - second.y).toBeCloseTo(12, 5)
+  })
+
+  it('does not move hints that are already far apart', () => {
+    const { first, second } = placePair({
+      hints: [
+        { text: '100 ₽', pointY: 60 },
+        { text: '90 ₽', pointY: 180 },
+      ],
+      pointX: 500,
+      fontSize: 10,
+      area: plotArea,
+    })
+
+    expect(first).toEqual({ anchor: 'start', x: 508, y: 54, text: '100 ₽' })
+    expect(second).toEqual({ anchor: 'start', x: 508, y: 174, text: '90 ₽' })
+  })
+
+  it('pulls the pair up when the lower hint does not fit above the bottom', () => {
+    const { first, second } = placePair({
+      hints: [
+        { text: '100 ₽', pointY: 232 },
+        { text: '90 ₽', pointY: 236 },
+      ],
+      pointX: 680,
+      fontSize: 10,
+      area: plotArea,
+    })
+
+    expect(first.y).toBeCloseTo(223.8, 5)
+    expect(second.y).toBeCloseTo(235.8, 5)
   })
 })

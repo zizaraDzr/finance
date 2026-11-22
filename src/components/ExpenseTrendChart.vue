@@ -76,7 +76,7 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod } from '@/types'
 import type { ChartArea } from '@/utils/chart'
-import { placePointHint } from '@/utils/chart'
+import { placePointHints } from '@/utils/chart'
 import { getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatPercent } from '@/utils/formatters'
 
@@ -232,44 +232,35 @@ const currentMarkerX = computed(() => {
 
   return getChartX(today.getDate() - 1, trendData.value.current.length)
 })
-const currentHint = computed(() => {
+const pointHints = computed(() => {
   if (currentMarkerX.value === null || !todayValues.value) {
     return null
   }
 
-  const text = formatMoney(todayValues.value.currentValue, store.currencySymbol)
-
-  return {
-    text,
-    ...placePointHint({
-      text,
-      pointX: currentMarkerX.value,
+  const hints = [
+    {
+      text: formatMoney(todayValues.value.currentValue, store.currencySymbol),
       pointY: getChartY(todayValues.value.currentValue),
-      fontSize: hintFontSize,
-      area: plotArea,
-    }),
-  }
-})
-const previousHint = computed(() => {
-  const previousValue = todayValues.value?.previousValue
+    },
+  ]
+  const previousValue = todayValues.value.previousValue
 
-  if (currentMarkerX.value === null || previousValue === undefined) {
-    return null
-  }
-
-  const text = formatMoney(previousValue, store.currencySymbol)
-
-  return {
-    text,
-    ...placePointHint({
-      text,
-      pointX: currentMarkerX.value,
+  if (previousValue !== undefined) {
+    hints.push({
+      text: formatMoney(previousValue, store.currencySymbol),
       pointY: getChartY(previousValue),
-      fontSize: hintFontSize,
-      area: plotArea,
-    }),
+    })
   }
+
+  return placePointHints({
+    hints,
+    pointX: currentMarkerX.value,
+    fontSize: hintFontSize,
+    area: plotArea,
+  })
 })
+const currentHint = computed(() => pointHints.value?.[0] ?? null)
+const previousHint = computed(() => pointHints.value?.[1] ?? null)
 
 function buildMonthTrend(currentMonth: string, previousMonth: string) {
   return {
