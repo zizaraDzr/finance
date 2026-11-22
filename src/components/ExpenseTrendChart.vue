@@ -50,18 +50,18 @@
           <circle class="trend-chart__dot trend-chart__dot--current" :cx="currentMarkerX"
             :cy="getChartY(todayValues.currentValue)" r="5" />
           <!-- Значение текущей линии -->
-          <text class="trend-chart__value trend-chart__value--current" :x="currentMarkerX + 8"
-            :y="getChartY(todayValues.currentValue) - 6">
-            {{ formatMoney(todayValues.currentValue, store.currencySymbol) }}
+          <text v-if="currentHint" class="trend-chart__value trend-chart__value--current" :x="currentHint.x"
+            :y="currentHint.y" :text-anchor="currentHint.anchor">
+            {{ currentHint.text }}
           </text>
 
           <!-- Точка на предыдущей линии -->
           <circle v-if="todayValues.previousValue !== undefined" class="trend-chart__dot trend-chart__dot--previous"
             :cx="currentMarkerX" :cy="getChartY(todayValues.previousValue)" r="5" />
           <!-- Значение предыдущей линии -->
-          <text v-if="todayValues.previousValue !== undefined" class="trend-chart__value trend-chart__value--previous"
-            :x="currentMarkerX + 8" :y="getChartY(todayValues.previousValue) - 6">
-            {{ formatMoney(todayValues.previousValue, store.currencySymbol) }}
+          <text v-if="previousHint" class="trend-chart__value trend-chart__value--previous"
+            :x="previousHint.x" :y="previousHint.y" :text-anchor="previousHint.anchor">
+            {{ previousHint.text }}
           </text>
         </g>
       </svg>
@@ -75,6 +75,8 @@
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { ExpensePeriod } from '@/types'
+import type { ChartArea } from '@/utils/chart'
+import { placePointHint } from '@/utils/chart'
 import { getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
 import { formatMoney, formatMonthTitle, formatPercent } from '@/utils/formatters'
 
@@ -100,6 +102,14 @@ const chartPlotLeft = 28
 const chartPlotRight = 18
 const chartPlotTop = 18
 const chartPlotBottom = 48
+// Размер шрифта подсказок в пользовательских единицах SVG (1.2rem от 16px).
+const hintFontSize = 19.2
+const plotArea: ChartArea = {
+  left: chartPlotLeft,
+  right: chartWidth - chartPlotRight,
+  top: chartPlotTop,
+  bottom: chartHeight - chartPlotBottom,
+}
 const monthLabels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 
 const previousMonthKey = computed(() => shiftMonthKey(props.selectedMonthKey, -1))
@@ -221,6 +231,44 @@ const currentMarkerX = computed(() => {
   }
 
   return getChartX(today.getDate() - 1, trendData.value.current.length)
+})
+const currentHint = computed(() => {
+  if (currentMarkerX.value === null || !todayValues.value) {
+    return null
+  }
+
+  const text = formatMoney(todayValues.value.currentValue, store.currencySymbol)
+
+  return {
+    text,
+    ...placePointHint({
+      text,
+      pointX: currentMarkerX.value,
+      pointY: getChartY(todayValues.value.currentValue),
+      fontSize: hintFontSize,
+      area: plotArea,
+    }),
+  }
+})
+const previousHint = computed(() => {
+  const previousValue = todayValues.value?.previousValue
+
+  if (currentMarkerX.value === null || previousValue === undefined) {
+    return null
+  }
+
+  const text = formatMoney(previousValue, store.currencySymbol)
+
+  return {
+    text,
+    ...placePointHint({
+      text,
+      pointX: currentMarkerX.value,
+      pointY: getChartY(previousValue),
+      fontSize: hintFontSize,
+      area: plotArea,
+    }),
+  }
 })
 
 function buildMonthTrend(currentMonth: string, previousMonth: string) {

@@ -28,14 +28,15 @@
         />
         <text
           class="histogram-chart__average-label"
-          :x="chartWidth - chartPlotRight"
-          :y="averageY - 8"
+          :x="averageLabel.placement.x"
+          :y="averageLabel.placement.y"
+          :text-anchor="averageLabel.placement.anchor"
         >
-          Среднее {{ formatMoney(averageExpense, store.currencySymbol) }}
+          {{ averageLabel.text }}
         </text>
 
         <g
-          v-for="month in monthlyExpenses"
+          v-for="month in chartMonths"
           :key="month.key"
           class="histogram-chart__month"
           :class="{ 'histogram-chart__month--disabled': !isMonthSelectable(month.key) }"
@@ -67,21 +68,17 @@
           <text
             class="histogram-chart__label"
             :x="getBarCenterX(month.index)"
-            :y="chartHeight - 18"
+            :y="chartHeight - 22"
           >
             {{ month.label }}
           </text>
           <text
-            v-if="month.index === maxExpenseIndex"
-            class="histogram-chart__max-label"
-            :x="getMaxLabelX(month.index)"
-            :y="getMaxLabelY(month.amount)"
-            :text-anchor="getMaxLabelAnchor(month.index)"
+            class="histogram-chart__sum-label"
+            :x="month.sumPlacement.x"
+            :y="month.sumPlacement.y"
+            :text-anchor="month.sumPlacement.anchor"
           >
-            <tspan>Максимум</tspan>
-            <tspan :x="getMaxLabelX(month.index)" dy="15">
-              {{ formatMoney(month.amount, store.currencySymbol) }}
-            </tspan>
+            {{ month.sumText }}
           </text>
         </g>
       </svg>
@@ -93,6 +90,8 @@
 import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { isValidDate, parseMonthKey } from '@/utils/date'
+import type { ChartArea, ChartHintPlacement } from '@/utils/chart'
+import { fitHintInArea } from '@/utils/chart'
 import { formatMoney, formatMonthTitle } from '@/utils/formatters'
 
 type MonthlyExpense = {
@@ -100,6 +99,11 @@ type MonthlyExpense = {
   index: number
   key: string
   label: string
+}
+
+type ChartMonth = MonthlyExpense & {
+  sumText: string
+  sumPlacement: ChartHintPlacement
 }
 
 const props = defineProps<{
@@ -117,6 +121,9 @@ const chartPlotLeft = 28
 const chartPlotRight = 28
 const chartPlotTop = 34
 const chartPlotBottom = 42
+// Размеры шрифтов подсказок в пользовательских единицах SVG (0.9rem и 0.6rem от 16px).
+const hintFontSize = 14.4
+const sumLabelFontSize = 9.6
 const monthLabels = [
   'Янв',
   'Фев',
@@ -179,6 +186,52 @@ const plotHeight = computed(() => chartHeight - chartPlotTop - chartPlotBottom)
 const monthSlotWidth = computed(() => plotWidth.value / monthlyExpenses.value.length)
 const barWidth = computed(() => monthSlotWidth.value * (1 - barGapRatio))
 const averageY = computed(() => getBarY(averageExpense.value))
+const plotArea = computed<ChartArea>(() => ({
+  left: chartPlotLeft,
+  right: chartWidth - chartPlotRight,
+  top: chartPlotTop,
+  bottom: chartHeight - chartPlotBottom,
+}))
+// Суммы месяцев живут в полосе под осью, а не внутри области столбцов.
+const labelArea = computed<ChartArea>(() => ({
+  left: chartPlotLeft,
+  right: chartWidth - chartPlotRight,
+  top: chartHeight - chartPlotBottom,
+  bottom: chartHeight,
+}))
+const chartMonths = computed<ChartMonth[]>(() =>
+  monthlyExpenses.value.map((month) => {
+    const sumText = formatMoney(month.amount, store.currencySymbol)
+
+    return {
+      ...month,
+      sumText,
+      sumPlacement: fitHintInArea({
+        text: sumText,
+        x: getBarCenterX(month.index),
+        y: chartHeight - 6,
+        anchor: 'middle',
+        fontSize: sumLabelFontSize,
+        area: labelArea.value,
+      }),
+    }
+  }),
+)
+const averageLabel = computed(() => {
+  const text = `Среднее ${formatMoney(averageExpense.value, store.currencySymbol)}`
+
+  return {
+    text,
+    placement: fitHintInArea({
+      text,
+      x: chartWidth - chartPlotRight,
+      y: averageY.value - 8,
+      anchor: 'end',
+      fontSize: hintFontSize,
+      area: plotArea.value,
+    }),
+  }
+})
 
 function getBarX(index: number) {
   return chartPlotLeft + monthSlotWidth.value * index + (monthSlotWidth.value - barWidth.value) / 2
@@ -214,18 +267,5 @@ function getBarY(amount: number) {
 
 function getBarHeight(amount: number) {
   return Math.max(chartHeight - chartPlotBottom - getBarY(amount), amount > 0 ? 4 : 0)
-}
-
-function getMaxLabelX(index: number) {
-  const offset = index >= monthlyExpenses.value.length - 3 ? -8 : barWidth.value + 8
-  return getBarX(index) + (offset < 0 ? 0 : offset)
-}
-
-function getMaxLabelY(amount: number) {
-  return Math.max(getBarY(amount) + 14, chartPlotTop + 16)
-}
-
-function getMaxLabelAnchor(index: number) {
-  return index >= monthlyExpenses.value.length - 3 ? 'end' : 'start'
 }
 </script>

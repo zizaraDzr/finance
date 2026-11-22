@@ -716,7 +716,6 @@ h2 {
   fill: #aef8c9;
   font-size: var(--chart-hint-font-size);
   font-weight: 800;
-  text-anchor: end;
 }
 
 .histogram-chart__bar {
@@ -733,10 +732,10 @@ h2 {
   text-anchor: middle;
 }
 
-.histogram-chart__max-label {
-  fill: #fff9ff;
-  font-size: var(--chart-hint-font-size);
-  font-weight: 800;
+.histogram-chart__sum-label {
+  fill: #d8c7ff;
+  font-size: 0.6rem;
+  font-weight: 600;
 }
 
 .histogram-chart__month {
