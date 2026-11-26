@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import type { VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import { useFinanceStore } from '@/stores/finance'
@@ -33,6 +34,30 @@ function mountChart(selectedMonthKey: string, period: ExpensePeriod, data: Finan
   })
 
   return { wrapper, store }
+}
+
+function readPolyline(wrapper: VueWrapper, selector: string) {
+  const points = wrapper.find(selector).attributes('points') ?? ''
+
+  return points
+    .trim()
+    .split(/\s+/)
+    .map(pair => {
+      const [x, y] = pair.split(',').map(Number)
+      return { x: x ?? 0, y: y ?? 0 }
+    })
+}
+
+function interpolateY(points: { x: number; y: number }[], x: number) {
+  const index = points.findIndex((point, i) => i > 0 && point.x >= x)
+  const right = points[index]
+  const left = points[index - 1]
+
+  if (!left || !right || right.x === left.x) {
+    return Number.NaN
+  }
+
+  return left.y + ((right.y - left.y) * (x - left.x)) / (right.x - left.x)
 }
 
 afterEach(() => {
@@ -90,6 +115,26 @@ describe('ExpenseTrendChart hints', () => {
     const hint = wrapper.find('.trend-chart__value--current')
 
     expect(hint.attributes('text-anchor')).toBe('start')
+  })
+
+  it('keeps the previous day dot on the previous line when the previous month is longer', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 26, 12))
+    const { wrapper } = mountChart('2026-11', 'month', {
+      Operation: [
+        createOperation({ sum: 1000, date: new Date(2026, 10, 26, 12).toISOString() }),
+        createOperation({ sum: 500, date: new Date(2026, 9, 26, 12).toISOString() }),
+        createOperation({ sum: 3000, date: new Date(2026, 9, 27, 12).toISOString() }),
+      ],
+    })
+
+    const markerX = Number(wrapper.find('.trend-chart__today').attributes('x1'))
+    const previousPoints = readPolyline(wrapper, '.trend-chart__line--previous')
+    const previousDot = wrapper.find('.trend-chart__dot--previous')
+
+    expect(Number(previousDot.attributes('cx'))).toBeCloseTo(markerX, 5)
+    expect(previousPoints[25]?.x).toBeCloseTo(markerX, 5)
+    expect(Number(previousDot.attributes('cy'))).toBeCloseTo(interpolateY(previousPoints, markerX), 5)
   })
 
   it('does not let the current and the previous value hints overlap', () => {

@@ -130,10 +130,16 @@ const trendCurrentLabel = computed(() =>
 const trendPreviousLabel = computed(() =>
   props.period === 'month' ? formatMonthTitle(previousMonthKey.value) : String(selectedYear.value - 1),
 )
+// Ось X размечена по дням (месяцам) выбранного периода, поэтому обе линии строятся
+// на одной шкале: иначе 31-дневный прошлый месяц сдвигает свою точку «сегодня».
+const chartPointCount = computed(() => trendData.value.current.length)
+const chartPreviousTrendData = computed(() =>
+  trendData.value.previous.slice(0, chartPointCount.value),
+)
 const trendMaxValue = computed(() =>
   Math.max(
     ...trendData.value.current.map(point => point.value),
-    ...trendData.value.previous.map(point => point.value),
+    ...chartPreviousTrendData.value.map(point => point.value),
     1,
   ),
 )
@@ -141,8 +147,12 @@ const currentTrendDataLength = computed(() => getCurrentTrendDataLength(trendDat
 const visibleCurrentTrendData = computed(() =>
   trendData.value.current.slice(0, currentTrendDataLength.value),
 )
-const currentTrendPoints = computed(() => getTrendPoints(visibleCurrentTrendData.value, trendData.value.current.length))
-const previousTrendPoints = computed(() => getTrendPoints(trendData.value.previous))
+const currentTrendPoints = computed(() =>
+  getTrendPoints(visibleCurrentTrendData.value, chartPointCount.value),
+)
+const previousTrendPoints = computed(() =>
+  getTrendPoints(chartPreviousTrendData.value, chartPointCount.value),
+)
 const trendComparison = computed(() => {
   const index = currentTrendDataLength.value - 1
   const currentValue = index >= 0 ? trendData.value.current[index]?.value || 0 : 0
@@ -188,7 +198,7 @@ const chartLabels = computed(() =>
     .map((point, index) => ({
       key: `${point.label}:${index}`,
       label: point.label,
-      x: getChartX(index * 2, trendData.value.current.length),
+      x: getChartX(index * 2, chartPointCount.value),
     })),
 )
 const todayValues = computed(() => {
@@ -230,7 +240,7 @@ const currentMarkerX = computed(() => {
     return null
   }
 
-  return getChartX(today.getDate() - 1, trendData.value.current.length)
+  return getChartX(today.getDate() - 1, chartPointCount.value)
 })
 const pointHints = computed(() => {
   if (currentMarkerX.value === null || !todayValues.value) {
@@ -342,7 +352,7 @@ function getCurrentTrendDataLength(totalLength: number) {
   return props.selectedMonthKey === store.currentMonthKey ? today.getDate() : totalLength
 }
 
-function getTrendPoints(points: TrendPoint[], totalLength = points.length) {
+function getTrendPoints(points: TrendPoint[], totalLength: number) {
   return points
     .map((point, index) => `${getChartX(index, totalLength)},${getChartY(point.value)}`)
     .join(' ')
