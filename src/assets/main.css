@@ -1528,11 +1528,16 @@ ul {
 .histogram-chart__label {
   fill: var(--text-tertiary);
   font-size: 0.62rem;
+  text-anchor: middle;
 }
 
 .histogram-chart__sum-label {
   fill: var(--text-tertiary);
   font-size: 0.58rem;
+}
+
+.histogram-chart__sum-compact {
+  display: none;
 }
 
 .histogram-chart__month {
@@ -3324,15 +3329,26 @@ ul {
   }
 
   .histogram-chart__label {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 
   .histogram-chart__sum-label {
     display: none;
   }
 
-  .histogram-chart__average-label {
+  .histogram-chart__sum-compact {
+    display: inline;
+    fill: var(--text-secondary);
     font-size: 1.05rem;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
+  .histogram-chart__average-label {
+    display: none;
   }
 
   .category-breakdown__toggle {
