@@ -52,3 +52,6 @@ default.json
 *.jks
 selfsigned.*
 certs/
+
+# Локальные артефакты дизайна: скриншоты и профиль headless Chrome
+.design/

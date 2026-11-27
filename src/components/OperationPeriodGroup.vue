@@ -1,14 +1,15 @@
 <template>
-  <article class="operations-period">
+  <article class="operations-period card">
     <header class="operations-period__header">
-      <div>
-        <p>{{ group.subtitle }}</p>
+      <div class="period-headline">
+        <span class="period-badge">{{ group.subtitle }}</span>
         <h2>{{ group.title }}</h2>
       </div>
 
       <div class="period-summary">
-        <span>Доход <b class="amount--income">{{ formatMoney(group.income, currencySymbol) }}</b></span>
-        <span>Расход <b class="amount--expense">{{ formatMoney(group.expense, currencySymbol) }}</b></span>
+        <span v-if="group.income > 0">Доход <b class="amount--income">{{ formatMoney(group.income, currencySymbol) }}</b></span>
+        <span v-if="group.expense > 0">Расход <b class="amount--expense">{{ formatMoney(group.expense, currencySymbol) }}</b></span>
+        <span class="period-summary__count">{{ formatOperationsCount(group.count) }}</span>
       </div>
     </header>
 
@@ -18,6 +19,7 @@
           v-for="operation in visibleDayOperations"
           :key="operation.id"
           :operation="operation"
+          :icon="getCategoryIcon?.(operation.categoryID)"
           :title="getCategoryName(operation.categoryID)"
           :subtitle="operation.subcategoryID ? getSubcategory(operation.subcategoryID)?.name : undefined"
           :time-label="formatOperationTime(operation.date)"
@@ -40,29 +42,34 @@
 
     <div v-else class="category-breakdown">
       <section v-for="category in group.categories" :key="category.key" class="category-breakdown__group">
-        <div class="category-breakdown__header">
-          <div class="breakdown-title">
-            <button
-              class="accordion-toggle"
-              type="button"
-              :class="{ 'accordion-toggle--open': isAccordionOpen(getCategoryAccordionKey(category.key)) }"
-              :aria-label="`Показать ${category.name}`"
-              @click="toggleAccordion(getCategoryAccordionKey(category.key))"
-            >
-              <span class="accordion-chevron">›</span>
-            </button>
+        <button
+          class="category-breakdown__toggle"
+          type="button"
+          :aria-label="`Показать ${category.name}`"
+          :aria-expanded="isAccordionOpen(getCategoryAccordionKey(category.key))"
+          @click="toggleAccordion(getCategoryAccordionKey(category.key))"
+        >
+          <span class="category-breakdown__icon" aria-hidden="true">
+            {{ getCategoryIcon?.(category.key) || '•' }}
+          </span>
 
-            <div>
-              <strong>{{ category.name }}</strong>
-              <span>{{ formatOperationsCount(category.count) }}</span>
-            </div>
-          </div>
+          <span class="category-breakdown__name">
+            <strong>{{ category.name }}</strong>
+            <span>{{ formatOperationsCount(category.count) }}</span>
+          </span>
 
-          <div class="period-summary period-summary--compact">
-            <span>Доход <b class="amount--income">{{ formatMoney(category.income, currencySymbol) }}</b></span>
-            <span>Расход <b class="amount--expense">{{ formatMoney(category.expense, currencySymbol) }}</b></span>
-          </div>
-        </div>
+          <b class="category-breakdown__amount" :class="category.balance >= 0 ? 'amount--income' : 'amount--expense'">
+            {{ formatMoney(category.balance, currencySymbol) }}
+          </b>
+
+          <span
+            class="accordion-chevron"
+            :class="{ 'accordion-chevron--open': isAccordionOpen(getCategoryAccordionKey(category.key)) }"
+            aria-hidden="true"
+          >
+            ›
+          </span>
+        </button>
 
         <div
           v-if="isAccordionOpen(getCategoryAccordionKey(category.key))"
@@ -71,22 +78,26 @@
         >
           <article v-for="subcategory in category.subcategories" :key="subcategory.key" class="subcategory-breakdown__group">
             <div v-if="category.subcategories.length > 1" class="subcategory-breakdown__header">
-              <div class="breakdown-title">
-                <button
-                  class="accordion-toggle accordion-toggle--subtle"
-                  type="button"
-                  :class="{ 'accordion-toggle--open': isAccordionOpen(getSubcategoryAccordionKey(category.key, subcategory.key)) }"
-                  :aria-label="`Показать ${subcategory.name}`"
-                  @click="toggleAccordion(getSubcategoryAccordionKey(category.key, subcategory.key))"
+              <button
+                class="subcategory-breakdown__toggle"
+                type="button"
+                :aria-label="`Показать ${subcategory.name}`"
+                :aria-expanded="isAccordionOpen(getSubcategoryAccordionKey(category.key, subcategory.key))"
+                @click="toggleAccordion(getSubcategoryAccordionKey(category.key, subcategory.key))"
+              >
+                <span
+                  class="accordion-chevron accordion-chevron--small"
+                  :class="{ 'accordion-chevron--open': isAccordionOpen(getSubcategoryAccordionKey(category.key, subcategory.key)) }"
+                  aria-hidden="true"
                 >
-                  <span class="accordion-chevron">›</span>
-                </button>
+                  ›
+                </span>
 
-                <div>
+                <span class="subcategory-breakdown__name">
                   <strong>{{ subcategory.name }}</strong>
                   <span>{{ formatOperationsCount(subcategory.count) }}</span>
-                </div>
-              </div>
+                </span>
+              </button>
 
               <b :class="subcategory.balance >= 0 ? 'amount--income' : 'amount--expense'">
                 {{ formatMoney(subcategory.balance, currencySymbol) }}
@@ -101,6 +112,7 @@
                 v-for="operation in subcategory.operations"
                 :key="operation.id"
                 :operation="operation"
+                :icon="getCategoryIcon?.(operation.categoryID)"
                 :title="formatOperationDateTime(operation.date)"
                 :subtitle="operation.note || undefined"
                 :time-label="getCategoryName(operation.categoryID)"
@@ -123,12 +135,18 @@ import OperationListItem from '@/components/OperationListItem.vue'
 import { useLoadMore } from '@/composables/useLoadMore'
 import type { Operation, OperationPeriodGroup, OperationsPeriod, Subcategory } from '@/types'
 import { toggleSetMember } from '@/utils/collections'
-import { formatMoney, formatOperationDateTime, formatOperationTime, formatOperationsCount } from '@/utils/formatters'
+import {
+  formatMoney,
+  formatOperationDateTime,
+  formatOperationTime,
+  formatOperationsCount,
+} from '@/utils/formatters'
 
 const props = defineProps<{
   currencySymbol: string
   getCategoryName: (id: string | null) => string
   getSubcategory: (id: string | null) => Subcategory | null | undefined
+  getCategoryIcon?: (id: string | null) => string | undefined
   group: OperationPeriodGroup
   period: OperationsPeriod
 }>()

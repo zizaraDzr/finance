@@ -87,4 +87,58 @@ describe('OperationsPage', () => {
     expect(wrapper.text()).toContain('Хлеб')
     expect(wrapper.findAll('.subcategory-breakdown__header')).toHaveLength(0)
   })
+
+  it('does not mix in operations from another month', async () => {
+    const food = createCategory({ id: 'cat-food', name: 'Продукты', type: 1 })
+    const cafe = createCategory({ id: 'cat-cafe', name: 'Кафе', type: 1 })
+    const { wrapper } = await mountPage({
+      Category: [food, cafe],
+      Operation: [
+        createOperation({
+          id: 'op-october',
+          categoryID: 'cat-food',
+          sum: 300,
+          date: '2026-10-02T12:00:00.000Z',
+        }),
+        createOperation({
+          id: 'op-september',
+          categoryID: 'cat-cafe',
+          sum: 200,
+          date: '2026-09-02T12:00:00.000Z',
+        }),
+      ],
+    })
+
+    expect(wrapper.text()).toContain('Продукты')
+    expect(wrapper.text()).not.toContain('Кафе')
+  })
+
+  it('finds a category by a note inside the selected month', async () => {
+    const food = createCategory({ id: 'cat-food', name: 'Продукты', type: 1 })
+    const cafe = createCategory({ id: 'cat-cafe', name: 'Кафе', type: 1 })
+    const { wrapper } = await mountPage({
+      Category: [food, cafe],
+      Operation: [
+        createOperation({
+          id: 'op-bread',
+          categoryID: 'cat-food',
+          sum: 300,
+          note: 'Хлеб',
+          date: '2026-10-02T12:00:00.000Z',
+        }),
+        createOperation({
+          id: 'op-coffee',
+          categoryID: 'cat-cafe',
+          sum: 200,
+          note: 'Кофе',
+          date: '2026-10-03T12:00:00.000Z',
+        }),
+      ],
+    })
+
+    await wrapper.find('input[type="search"]').setValue('хлеб')
+
+    expect(wrapper.text()).toContain('Продукты')
+    expect(wrapper.text()).not.toContain('Кафе')
+  })
 })

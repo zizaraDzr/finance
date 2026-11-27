@@ -1,11 +1,12 @@
 <template>
-  <article class="panel analytics-panel">
-    <div class="panel__header">
+  <article class="card chart-card">
+    <header class="card__head">
       <div>
-        <h2>Тенденция</h2>
+        <p class="eyebrow">Динамика</p>
+        <h2>{{ trendTitle }}</h2>
         <span>{{ trendSubtitle }}</span>
       </div>
-    </div>
+    </header>
 
     <div class="trend-legend" aria-label="Легенда графика">
       <span><i class="trend-legend__marker trend-legend__marker--current"></i>{{ trendCurrentLabel }}</span>
@@ -123,6 +124,9 @@ const trendData = computed(() =>
 )
 const trendSubtitle = computed(() =>
   props.period === 'month' ? 'Текущий месяц к предыдущему' : 'Текущий год к предыдущему',
+)
+const trendTitle = computed(() =>
+  props.period === 'month' ? 'Расходы по дням' : 'Расходы по месяцам',
 )
 const trendCurrentLabel = computed(() =>
   props.period === 'month' ? selectedMonthTitle.value : String(selectedYear.value),

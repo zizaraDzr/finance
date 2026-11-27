@@ -1,45 +1,50 @@
 <template>
   <section class="categories-page" :aria-busy="isSaving">
-    <header class="categories-page__header">
-      <button class="back-button" type="button" @click="goHome">Назад</button>
+    <header class="page-head">
+      <div class="page-head__text">
+        <p class="eyebrow">Настройки</p>
+        <h1>Категории</h1>
+        <p class="page-lead">Расходы и доходы, по которым вы ведёте учёт.</p>
+      </div>
 
-      <div>
-        <h3>Категории</h3>
+      <div class="page-head__actions">
+        <fieldset class="segmented categories-type-switch">
+          <legend class="visually-hidden">Тип категорий</legend>
+          <label class="segmented__option" :class="{ 'segmented__option--active': selectedType === 1 }">
+            <input v-model="selectedType" type="radio" :value="1" @change="resetTransientState" />
+            <span>Расходы</span>
+          </label>
+          <label class="segmented__option" :class="{ 'segmented__option--active': selectedType === 0 }">
+            <input v-model="selectedType" type="radio" :value="0" @change="resetTransientState" />
+            <span>Доходы</span>
+          </label>
+        </fieldset>
       </div>
     </header>
 
-    <fieldset class="type-switch categories-type-switch">
-      <legend>Тип категорий</legend>
-      <label :class="{ 'type-switch__item--active': selectedType === 1 }">
-        <input v-model="selectedType" type="radio" :value="1" @change="resetTransientState" />
-        <span>Расход</span>
-      </label>
-      <label :class="{ 'type-switch__item--active': selectedType === 0 }">
-        <input v-model="selectedType" type="radio" :value="0" @change="resetTransientState" />
-        <span>Доход</span>
-      </label>
-    </fieldset>
-
-    <form class="category-create panel" @submit.prevent="createCategory">
-      <label class="field">
-        <span>Новая категория</span>
-        <input v-model="newCategoryName" type="text" placeholder="Название" />
-      </label>
-
+    <form class="category-create card" @submit.prevent="createCategory">
       <label class="field category-create__icon">
-        <span>Иконка</span>
+        <span class="field-label">Иконка</span>
         <input v-model="newCategoryIcon" type="text" placeholder="🎨" maxlength="16" />
       </label>
 
-      <button class="submit-button category-create__submit" type="submit" :disabled="isSaving">
-        Добавить
+      <label class="field">
+        <span class="field-label">Новая категория</span>
+        <input v-model="newCategoryName" type="text" placeholder="Название" />
+      </label>
+
+      <button class="button button--primary category-create__submit" type="submit" :disabled="isSaving">
+        <AppIcon name="plus" :size="17" />
+        <span>Добавить</span>
       </button>
     </form>
 
     <p v-if="message" class="form-error">{{ message }}</p>
 
-    <section class="category-manager panel" aria-label="Список категорий">
-      <p v-if="visibleCategories.length === 0" class="empty-state">Категорий этого типа пока нет.</p>
+    <section class="category-manager card" aria-label="Список категорий">
+      <p v-if="visibleCategories.length === 0" class="empty-state">
+        Категорий этого типа пока нет. Добавьте первую — это займёт пару секунд.
+      </p>
 
       <article
         v-for="category in visibleCategories"
@@ -56,9 +61,10 @@
           <div class="category-edit__fields">
             <input
               v-model="editingCategory.name"
-              class="category-input category-edit__input"
+              class="category-input category-edit__input category-edit__input--name"
               type="text"
               placeholder="Название"
+              aria-label="Название категории"
             />
             <input
               v-model="editingCategory.icon"
@@ -66,14 +72,15 @@
               type="text"
               placeholder="🎨"
               maxlength="16"
+              aria-label="Иконка категории"
             />
           </div>
 
           <div class="category-edit__type">
             <span>Тип</span>
             <button
-              class="panel-link-button"
-              :class="{ 'category-edit__type-button--expense': editingCategory.type === 1 }"
+              class="chip"
+              :class="{ 'chip--active': editingCategory.type === 1 }"
               type="button"
               :disabled="isSaving || categoryHasOperations(category.id)"
               @click="editingCategory.type = 1"
@@ -81,8 +88,8 @@
               Расход
             </button>
             <button
-              class="panel-link-button"
-              :class="{ 'category-edit__type-button--income': editingCategory.type === 0 }"
+              class="chip"
+              :class="{ 'chip--active': editingCategory.type === 0 }"
               type="button"
               :disabled="isSaving || categoryHasOperations(category.id)"
               @click="editingCategory.type = 0"
@@ -96,10 +103,10 @@
           </p>
 
           <div class="category-manager__actions">
-            <button class="panel-link-button panel-link-button--primary" type="submit" :disabled="isSaving">
+            <button class="button button--primary button--small" type="submit" :disabled="isSaving">
               Сохранить
             </button>
-            <button class="panel-link-button" type="button" :disabled="isSaving" @click="cancelCategoryEdit">
+            <button class="button button--quiet button--small" type="button" :disabled="isSaving" @click="cancelCategoryEdit">
               Отмена
             </button>
           </div>
@@ -107,9 +114,15 @@
 
         <div v-else class="category-manager__row">
           <div class="category-manager__title">
-            <span v-if="category.icon" class="category-manager__icon" aria-hidden="true">{{ category.icon }}</span>
-            <strong>{{ category.name || 'Без названия' }}</strong>
-            <span class="category-manager__meta">{{ formatOperationsCount(categoryOperationsCount(category.id)) }}</span>
+            <span class="category-manager__icon" aria-hidden="true">{{ category.icon || '•' }}</span>
+
+            <span class="category-manager__title-text">
+              <strong>{{ category.name || 'Без названия' }}</strong>
+              <span class="category-manager__meta">
+                {{ formatOperationsCount(categoryOperationsCount(category.id)) }}
+              </span>
+            </span>
+
             <span v-if="!category.isActive" class="category-manager__badge">неактивна</span>
           </div>
 
@@ -124,30 +137,21 @@
               <span>Активна</span>
             </label>
 
-            <button class="panel-link-button" type="button" :disabled="isSaving" @click="startCategoryEdit(category)">
+            <button class="button button--quiet button--small" type="button" :disabled="isSaving" @click="startCategoryEdit(category)">
               Изм.
             </button>
-            <button class="panel-link-button" type="button" :disabled="isSaving" @click="removeCategory(category)">
+            <button class="button button--quiet button--small button--danger" type="button" :disabled="isSaving" @click="removeCategory(category)">
               Удалить
             </button>
           </div>
         </div>
-
-        <form class="subcategory-create" @submit.prevent="createSubcategory(category)">
-          <input
-            v-model="newSubcategoryNames[category.id]"
-            class="category-input"
-            type="text"
-            placeholder="Новая подкатегория"
-          />
-          <button class="panel-link-button" type="submit" :disabled="isSaving">Добавить</button>
-        </form>
 
         <ul v-if="categorySubcategories(category.id).length" class="subcategory-manager">
           <li
             v-for="subcategory in categorySubcategories(category.id)"
             :key="subcategory.id"
             class="subcategory-manager__item"
+            :class="{ 'subcategory-manager__item--inactive': !subcategory.isActive }"
           >
             <form
               v-if="editingSubcategoryId === subcategory.id"
@@ -162,10 +166,10 @@
               />
 
               <div class="category-manager__actions">
-                <button class="panel-link-button panel-link-button--primary" type="submit" :disabled="isSaving">
+                <button class="button button--primary button--small" type="submit" :disabled="isSaving">
                   Сохранить
                 </button>
-                <button class="panel-link-button" type="button" :disabled="isSaving" @click="cancelSubcategoryEdit">
+                <button class="button button--quiet button--small" type="button" :disabled="isSaving" @click="cancelSubcategoryEdit">
                   Отмена
                 </button>
               </div>
@@ -178,36 +182,50 @@
               </div>
 
               <div class="category-manager__actions">
-                <label class="category-manager__toggle">
+                <label class="category-manager__toggle category-manager__toggle--compact" :title="subcategory.isActive ? 'Скрыть из выбора' : 'Вернуть в выбор'">
                   <input
                     type="checkbox"
                     :checked="subcategory.isActive"
                     :disabled="isSaving"
+                    :aria-label="`Активна: ${subcategory.name}`"
                     @change="setSubcategoryActive(subcategory, $event)"
                   />
-                  <span>Активна</span>
                 </label>
 
                 <button
-                  class="panel-link-button"
+                  class="icon-button icon-button--small"
                   type="button"
                   :disabled="isSaving"
+                  :aria-label="`Изменить ${subcategory.name}`"
                   @click="startSubcategoryEdit(subcategory)"
                 >
-                  Изм.
+                  <AppIcon name="pencil" :size="14" />
                 </button>
                 <button
-                  class="panel-link-button"
+                  class="icon-button icon-button--small icon-button--danger"
                   type="button"
                   :disabled="isSaving"
+                  :aria-label="`Удалить ${subcategory.name}`"
                   @click="removeSubcategory(subcategory)"
                 >
-                  Удалить
+                  <AppIcon name="trash" :size="14" />
                 </button>
               </div>
             </div>
           </li>
         </ul>
+
+        <form class="subcategory-create" @submit.prevent="createSubcategory(category)">
+          <input
+            v-model="newSubcategoryNames[category.id]"
+            class="category-input"
+            type="text"
+            :placeholder="categorySubcategories(category.id).length ? 'Ещё подкатегория' : 'Подкатегория'"
+          />
+          <button class="icon-button icon-button--small" type="submit" :disabled="isSaving" aria-label="Добавить подкатегорию">
+            <AppIcon name="plus" :size="15" />
+          </button>
+        </form>
       </article>
     </section>
   </section>
@@ -215,7 +233,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '@/components/AppIcon.vue'
 import { useFinanceStore } from '@/stores/finance'
 import type { Category, Subcategory } from '@/types'
 import {
@@ -226,11 +244,8 @@ import {
   groupSubcategoriesByCategory,
 } from '@/utils/categories'
 import { formatOperationsCount } from '@/utils/formatters'
-import { readOptionalMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
-const route = useRoute()
-const router = useRouter()
 const selectedType = ref(1)
 const isSaving = ref(false)
 const message = ref('')
@@ -242,8 +257,6 @@ const editingCategory = ref({ name: '', icon: '', type: 1 })
 const editingSubcategoryId = ref<string | null>(null)
 const editingSubcategoryName = ref('')
 const newCategoryId = ref<string | null>(null)
-
-const returnMonth = computed(() => readOptionalMonthQuery(route.query.month))
 
 const visibleCategories = computed(() =>
   store.categories
@@ -265,13 +278,6 @@ function categoryHasOperations(categoryId: string) {
 
 function categorySubcategories(categoryId: string) {
   return subcategoriesByCategory.value.get(categoryId) || []
-}
-
-function goHome() {
-  router.push({
-    name: 'dashboard',
-    query: returnMonth.value ? { month: returnMonth.value } : {},
-  })
 }
 
 function resetTransientState() {

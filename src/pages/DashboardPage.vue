@@ -1,117 +1,205 @@
 <template>
   <section class="dashboard">
-    <header class="dashboard__header">
-      <div class="month-heading">
-        <h2>{{ selectedMonthTitle }}</h2>
+    <header class="page-head">
+      <div class="page-head__text">
+        <p class="eyebrow">Обзор</p>
 
-        <div class="month-heading__links">
-          <button class="month-heading__link" type="button" @click="openCategoriesPage">
-            Категории
-          </button>
-          <button class="month-heading__link" type="button" @click="openCategoryAnalyticsPage">
-            Аналитика
-          </button>
+        <div class="page-head__title-row">
+          <h1>{{ selectedMonthTitle }}</h1>
+
+          <div class="month-nav" aria-label="Выбор месяца">
+            <button class="month-nav__button" type="button" aria-label="Предыдущий месяц" @click="selectPreviousMonth">
+              <AppIcon name="chevron-left" :size="18" />
+            </button>
+            <button
+              class="month-nav__button"
+              type="button"
+              aria-label="Следующий месяц"
+              :disabled="!hasNextMonth"
+              @click="selectNextMonth"
+            >
+              <AppIcon name="chevron-right" :size="18" />
+            </button>
+          </div>
+        </div>
+
+        <div class="page-head__links">
+          <button class="text-link" type="button" @click="openCategoriesPage">Категории</button>
+          <span class="text-link__dot" aria-hidden="true">·</span>
+          <button class="text-link" type="button" @click="openExpenseAnalyticsPage">Аналитика</button>
         </div>
       </div>
 
-      <div class="header-actions">
-        <!-- <button class="add-button" type="button" aria-label="Добавить запись" @click="clearDB">
-          -
-        </button> -->
-        <button class="add-button" type="button" aria-label="Добавить запись" @click="openAddPage">
-          +
+      <div class="page-head__actions">
+        <button
+          class="button button--ghost sync-button"
+          :class="{ 'sync-button--error': syncError }"
+          type="button"
+          :disabled="isSyncing"
+          @click="syncData"
+        >
+          <AppIcon name="refresh" :size="17" />
+          <span>{{ isSyncing ? 'Обновление…' : 'Обновить' }}</span>
+          <small v-if="syncMessage">{{ syncMessage }}</small>
         </button>
 
-
-
-        <div class="balance-pill" :class="monthBalance >= 0 ? 'balance-pill--positive' : 'balance-pill--negative'">
-          <span>Баланс месяца</span>
-          <strong>{{ formatMoney(monthBalance, store.currencySymbol) }}</strong>
-        </div>
+        <button class="button button--primary add-button" type="button" @click="openAddPage">
+          <AppIcon name="plus" :size="18" />
+          <span>Новая операция</span>
+        </button>
       </div>
-      <button
-        class="sync-button"
-        :class="{ 'sync-button--error': syncError }"
-        type="button"
-        :disabled="isSyncing"
-        @click="syncData"
-      >
-        <span>{{ isSyncing ? 'Обновление…' : 'Обновить' }}</span>
-        <small v-if="syncMessage">{{ syncMessage }}</small>
-      </button>
     </header>
 
-    <section class="metrics" aria-label="Сводка доходов и расходов за месяц">
-      <button class="metric-card metric-card--expense metric-card--button" type="button"
-        @click="openExpenseAnalyticsPage">
-        <div style="height: 100%; display: grid; align-items: start;">
-          <div class="metric-card__topline">
-            <span>Расход</span>
-            <span class="metric-card__marker"></span>
-          </div>
-          <strong>{{ formatMoney(currentMonth.expense, store.currencySymbol) }}</strong>
+    <section class="hero" aria-label="Итоги месяца">
+      <div class="hero__body">
+        <div class="hero__main">
+          <p class="hero__label">Баланс месяца</p>
+          <strong class="hero__amount" :class="{ 'hero__amount--negative': monthBalance < 0 }">
+            {{ formatMoney(monthBalance, store.currencySymbol) }}
+          </strong>
+          <p class="hero__note">{{ heroNote }}</p>
         </div>
-      </button>
 
-      <ExpenseTrendChart :selected-month-key="selectedMonthKey" />
+        <div class="hero__stats">
+          <div class="hero-stat">
+            <span>Доходы</span>
+            <strong>{{ formatMoney(currentMonth.income, store.currencySymbol) }}</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Расходы</span>
+            <strong>{{ formatMoney(currentMonth.expense, store.currencySymbol) }}</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Норма сбережений</span>
+            <strong>{{ savingsRateLabel }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__meter" aria-hidden="true">
+        <span class="hero__meter-label">{{ heroMeterLabel }}</span>
+        <span class="hero__meter-track">
+          <span class="hero__meter-fill" :style="{ width: `${expenseShare}%` }"></span>
+        </span>
+      </div>
     </section>
 
-    <section class="details-grid">
-      <article class="panel">
-        <div class="panel__header">
-          <h2>Динамика</h2>
-          <span>{{ previousMonthTitle }}</span>
-        </div>
+    <div class="dashboard__grid">
+      <div class="dashboard__main">
+        <ExpenseTrendChart :selected-month-key="selectedMonthKey" />
 
-        <div class="comparison">
-          <div>
-            <span>Доход прошлого месяца</span>
-            <strong>{{ formatMoney(previousMonth.income, store.currencySymbol) }}</strong>
+        <section class="card recent-card">
+          <header class="card__head">
+            <div>
+              <p class="eyebrow">Движение</p>
+              <h2>Последние операции</h2>
+            </div>
+            <button class="text-link" type="button" @click="openOperationsPage">Все операции</button>
+          </header>
+
+          <p v-if="recentOperations.length === 0" class="empty-state">
+            За этот месяц операций пока нет. Добавьте первую запись — и здесь появится история.
+          </p>
+
+          <ul v-else class="operation-list operation-list--recent">
+            <OperationListItem
+              v-for="operation in recentOperations"
+              :key="operation.id"
+              :operation="operation"
+              :icon="store.getCategory(operation.categoryID)?.icon"
+              :title="store.getCategoryName(operation.categoryID)"
+              :subtitle="operation.subcategoryID ? store.getSubcategory(operation.subcategoryID)?.name : undefined"
+              :time-label="formatDate(operation.date)"
+              :amount-label="formatMoney(operation.sum, store.currencySymbol)"
+            />
+          </ul>
+        </section>
+      </div>
+
+      <aside class="dashboard__side">
+        <section class="card categories-card">
+          <header class="card__head">
+            <div>
+              <p class="eyebrow">Структура</p>
+              <h2>Куда уходят деньги</h2>
+            </div>
+            <button class="text-link" type="button" @click="openExpenseAnalyticsPage">Подробнее</button>
+          </header>
+
+          <p v-if="topCategories.length === 0" class="empty-state">
+            В этом месяце расходов ещё не было.
+          </p>
+
+          <div v-else class="spending-list">
+            <div v-for="category in topCategories" :key="category.id" class="spending-row">
+              <span class="spending-row__icon" aria-hidden="true">{{ category.icon || '•' }}</span>
+
+              <div class="spending-row__main">
+                <div class="spending-row__line">
+                  <strong>{{ category.name }}</strong>
+                  <b>{{ formatMoney(category.amount, store.currencySymbol) }}</b>
+                </div>
+                <span class="share-bar" aria-hidden="true">
+                  <span :style="{ width: `${Math.max(category.share, 2)}%` }"></span>
+                </span>
+                <span class="spending-row__meta">
+                  {{ formatPercent(category.share) }} · {{ formatOperationsCount(category.count) }}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span>Расход прошлого месяца</span>
-            <strong>{{ formatMoney(previousMonth.expense, store.currencySymbol) }}</strong>
-          </div>
-        </div>
-      </article>
+        </section>
 
-      <article class="panel">
-        <div class="panel__header">
-          <div>
-            <h3>Последние операции</h3>
-          </div>
-          <button class="panel-link-button" type="button" @click="openOperationsPage">Все операции</button>
-        </div>
+        <section class="card recap-card">
+          <header class="card__head">
+            <div>
+              <p class="eyebrow">Сравнение</p>
+              <h2>{{ previousMonthTitle }}</h2>
+            </div>
+          </header>
 
-        <p v-if="recentOperations.length === 0" class="empty-state">За этот месяц операций пока нет.</p>
+          <dl class="recap">
+            <div>
+              <dt>Доходы</dt>
+              <dd class="amount--income">{{ formatMoney(previousMonth.income, store.currencySymbol) }}</dd>
+            </div>
+            <div>
+              <dt>Расходы</dt>
+              <dd class="amount--expense">{{ formatMoney(previousMonth.expense, store.currencySymbol) }}</dd>
+            </div>
+            <div>
+              <dt>Баланс</dt>
+              <dd :class="previousMonth.balance >= 0 ? 'amount--income' : 'amount--expense'">
+                {{ formatMoney(previousMonth.balance, store.currencySymbol) }}
+              </dd>
+            </div>
+          </dl>
 
-        <ul v-else class="operation-list">
-          <OperationListItem
-            v-for="operation in recentOperations"
-            :key="operation.id"
-            :operation="operation"
-            :title="store.getCategoryName(operation.categoryID)"
-            :subtitle="operation.subcategoryID ? store.getSubcategory(operation.subcategoryID)?.name : undefined"
-            :time-label="formatDate(operation.date)"
-            :amount-label="formatMoney(operation.sum, store.currencySymbol)"
-          />
-        </ul>
-      </article>
-    </section>
+          <p class="recap__hint">{{ expenseComparisonText }}</p>
+        </section>
+      </aside>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '@/components/AppIcon.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import OperationListItem from '@/components/OperationListItem.vue'
 import { requestAppUpdate } from '@/services/appUpdate'
 import { syncFinanceData } from '@/services/financeSync'
 import { useFinanceStore } from '@/stores/finance'
 import { getMonthKey, shiftMonthKey } from '@/utils/date'
-import { formatDate, formatMoney, formatMonthTitle } from '@/utils/formatters'
-import { sortOperationsByDateDesc } from '@/utils/operations'
+import {
+  formatDate,
+  formatMoney,
+  formatMonthTitle,
+  formatOperationsCount,
+  formatPercent,
+} from '@/utils/formatters'
+import { buildCategoryBreakdown, sortOperationsByDateDesc } from '@/utils/operations'
 import { readMonthQuery } from '@/utils/routeQuery'
 
 const store = useFinanceStore()
@@ -128,6 +216,42 @@ const previousMonth = computed(() => store.getMonthlySummary(previousMonthKey.va
 const monthBalance = computed(() => currentMonth.value.balance)
 const selectedMonthTitle = computed(() => formatMonthTitle(selectedMonthKey.value))
 const previousMonthTitle = computed(() => formatMonthTitle(previousMonthKey.value))
+const hasNextMonth = computed(() => selectedMonthKey.value < store.currentMonthKey)
+const savingsRate = computed(() =>
+  currentMonth.value.income > 0 ? Math.round((monthBalance.value / currentMonth.value.income) * 100) : 0,
+)
+const savingsRateLabel = computed(() =>
+  currentMonth.value.income > 0 ? `${savingsRate.value}%` : '—',
+)
+const expenseShare = computed(() => {
+  if (currentMonth.value.income <= 0) {
+    return currentMonth.value.expense > 0 ? 100 : 0
+  }
+
+  return Math.min(100, Math.round((currentMonth.value.expense / currentMonth.value.income) * 100))
+})
+const heroNote = computed(() => {
+  if (currentMonth.value.income === 0 && currentMonth.value.expense === 0) {
+    return 'Пока нет операций за этот месяц'
+  }
+
+  if (currentMonth.value.income === 0) {
+    return 'Доходы в этом месяце не внесены'
+  }
+
+  return monthBalance.value >= 0
+    ? `Доходы покрывают расходы за ${selectedMonthTitle.value.toLowerCase()}`
+    : `Расходы больше доходов за ${selectedMonthTitle.value.toLowerCase()}`
+})
+const heroMeterLabel = computed(() => {
+  if (currentMonth.value.income > 0) {
+    return `Из дохода потрачено ${expenseShare.value}%`
+  }
+
+  return currentMonth.value.expense > 0
+    ? 'Доходы не внесены — процент не посчитать'
+    : 'Добавьте первую операцию, чтобы увидеть динамику'
+})
 
 const recentOperations = computed(() =>
   sortOperationsByDateDesc(
@@ -136,6 +260,78 @@ const recentOperations = computed(() =>
     ),
   ).slice(0, 5),
 )
+
+const monthExpenses = computed(() =>
+  store.activeOperations.filter(operation => {
+    if (operation.type !== 1) {
+      return false
+    }
+
+    const date = new Date(operation.date)
+    return !Number.isNaN(date.getTime()) && getMonthKey(date) === selectedMonthKey.value
+  }),
+)
+
+const topCategories = computed(() => {
+  const total = monthExpenses.value.reduce((sum, operation) => sum + operation.sum, 0)
+
+  return buildCategoryBreakdown(monthExpenses.value, {
+    getCategoryName: store.getCategoryName,
+    getSubcategory: store.getSubcategory,
+  })
+    .slice(0, 5)
+    .map(category => ({
+      id: category.key,
+      name: category.name,
+      icon: store.getCategory(category.key)?.icon,
+      amount: category.expense,
+      count: category.count,
+      share: total > 0 ? (category.expense / total) * 100 : 0,
+    }))
+})
+
+const expenseComparisonText = computed(() => {
+  const current = currentMonth.value.expense
+  const previous = previousMonth.value.expense
+
+  if (previous === 0) {
+    return current > 0
+      ? 'Это первый месяц с расходами — сравнивать пока не с чем.'
+      : 'В прошлом месяце расходов тоже не было.'
+  }
+
+  const difference = current - previous
+  const percent = Math.abs(Math.round((difference / previous) * 100))
+
+  if (difference === 0) {
+    return 'Расходы держатся на уровне прошлого месяца.'
+  }
+
+  return difference > 0
+    ? `Расходы выросли на ${percent}% к прошлому месяцу.`
+    : `Расходы снизились на ${percent}% к прошлому месяцу.`
+})
+
+function selectMonth(month: string) {
+  router.push({
+    name: 'dashboard',
+    query: {
+      month,
+    },
+  })
+}
+
+function selectPreviousMonth() {
+  selectMonth(previousMonthKey.value)
+}
+
+function selectNextMonth() {
+  if (!hasNextMonth.value) {
+    return
+  }
+
+  selectMonth(shiftMonthKey(selectedMonthKey.value, 1))
+}
 
 function openAddPage() {
   router.push({
@@ -166,15 +362,6 @@ function openCategoriesPage() {
   })
 }
 
-function openCategoryAnalyticsPage() {
-  router.push({
-    name: 'category-analytics',
-    query: {
-      month: selectedMonthKey.value,
-    },
-  })
-}
-
 function openExpenseAnalyticsPage() {
   router.push({
     name: 'expense-analytics',
@@ -184,6 +371,7 @@ function openExpenseAnalyticsPage() {
     },
   })
 }
+
 async function syncData() {
   isSyncing.value = true
   syncMessage.value = ''

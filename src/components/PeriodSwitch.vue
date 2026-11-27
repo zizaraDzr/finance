@@ -1,30 +1,36 @@
 <template>
-  <section class="operations-toolbar" aria-label="Фильтры операций">
-    <fieldset class="period-switch operation-type-switch">
-      <legend>Тип операций</legend>
+  <section class="ledger-toolbar" aria-label="Фильтры операций">
+    <div class="ledger-toolbar__types" role="group" aria-label="Тип операций">
       <button
         v-for="option in operationTypeOptions"
         :key="option.value"
+        class="chip"
+        :class="{ 'chip--active': operationType === option.value }"
         type="button"
-        :class="{ 'period-switch__button--active': operationType === option.value }"
+        :aria-pressed="operationType === option.value"
         @click="$emit('update:operationType', option.value)"
       >
         {{ option.label }}
       </button>
-    </fieldset>
+    </div>
 
-    <fieldset class="period-switch">
-      <legend>Период</legend>
-      <button
-        v-for="option in periodOptions"
-        :key="option.value"
-        type="button"
-        :class="{ 'period-switch__button--active': modelValue === option.value }"
-        @click="$emit('update:modelValue', option.value)"
-      >
-        {{ option.label }}
-      </button>
-    </fieldset>
+    <div class="ledger-toolbar__period">
+      <span class="ledger-toolbar__label">Группировка</span>
+
+      <div class="segmented" role="group" aria-label="Период">
+        <button
+          v-for="option in periodOptions"
+          :key="option.value"
+          class="segmented__button"
+          :class="{ 'segmented__button--active': modelValue === option.value }"
+          type="button"
+          :aria-pressed="modelValue === option.value"
+          @click="$emit('update:modelValue', option.value)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </div>
   </section>
 </template>
 
