@@ -137,6 +137,25 @@ describe('ExpenseTrendChart hints', () => {
     expect(Number(previousDot.attributes('cy'))).toBeCloseTo(interpolateY(previousPoints, markerX), 5)
   })
 
+  it('puts the bigger value hint above the smaller one even when it has to go below its point', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 15, 12))
+    const { wrapper } = mountChart('2026-11', 'year', {
+      Operation: [
+        createOperation({ sum: 1000, date: new Date(2026, 9, 1, 12).toISOString() }),
+        createOperation({ sum: 860, date: new Date(2025, 9, 1, 12).toISOString() }),
+      ],
+    })
+
+    const current = wrapper.find('.trend-chart__value--current')
+    const previous = wrapper.find('.trend-chart__value--previous')
+    const currentY = Number(current.attributes('y'))
+    const previousY = Number(previous.attributes('y'))
+
+    expect(currentY).toBeLessThan(previousY)
+    expect(previousY - currentY).toBeGreaterThanOrEqual(23)
+  })
+
   it('does not let the current and the previous value hints overlap', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 10, 22, 12))

@@ -39,6 +39,7 @@ export type PointHint = {
 
 export type PlacedPointHint = ChartHintPlacement & {
   text: string
+  pointY: number
 }
 
 type PlacePointHintsInput = {
@@ -124,6 +125,7 @@ export function placePointHint(input: PlacePointHintInput): ChartHintPlacement {
 export function placePointHints(input: PlacePointHintsInput): PlacedPointHint[] {
   const placed = input.hints.map(hint => ({
     text: hint.text,
+    pointY: hint.pointY,
     ...placePointHint({
       text: hint.text,
       pointX: input.pointX,
@@ -146,8 +148,10 @@ export function placePointHints(input: PlacePointHintsInput): PlacedPointHint[] 
     return placed
   }
 
+  // Порядок подсказок задают точки, а не выбранные для них стороны: у верхней точки
+  // подсказка может не поместиться сверху и уйти вниз, но значение должно остаться выше.
   const lineHeight = input.fontSize * collisionLineHeightRatio
-  const upper = first.y <= second.y ? first : second
+  const upper = first.pointY <= second.pointY ? first : second
   const lower = upper === first ? second : first
   const maxY = input.area.bottom - input.fontSize * descentRatio
   let upperY = upper.y

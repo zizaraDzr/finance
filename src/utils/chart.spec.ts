@@ -174,6 +174,21 @@ describe('placePointHints', () => {
     expect(first.y - second.y).toBeCloseTo(12, 5)
   })
 
+  it('orders colliding hints by their points, not by the side each one chose', () => {
+    const { first, second } = placePair({
+      hints: [
+        { text: '100 ₽', pointY: 36 },
+        { text: '90 ₽', pointY: 64 },
+      ],
+      pointX: 500,
+      fontSize: 10,
+      area: plotArea,
+    })
+
+    expect(first.y).toBeLessThan(second.y)
+    expect(second.y - first.y).toBeCloseTo(12, 5)
+  })
+
   it('does not move hints that are already far apart', () => {
     const { first, second } = placePair({
       hints: [
@@ -185,8 +200,8 @@ describe('placePointHints', () => {
       area: plotArea,
     })
 
-    expect(first).toEqual({ anchor: 'start', x: 508, y: 54, text: '100 ₽' })
-    expect(second).toEqual({ anchor: 'start', x: 508, y: 174, text: '90 ₽' })
+    expect(first).toEqual({ anchor: 'start', x: 508, y: 54, text: '100 ₽', pointY: 60 })
+    expect(second).toEqual({ anchor: 'start', x: 508, y: 174, text: '90 ₽', pointY: 180 })
   })
 
   it('pulls the pair up when the lower hint does not fit above the bottom', () => {
