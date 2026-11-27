@@ -3,12 +3,12 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const COLORS = {
-  backgroundTop: [36, 21, 54],
-  backgroundBottom: [16, 11, 26],
-  glow: [124, 92, 255],
-  coinTop: [178, 152, 255],
-  coinBottom: [112, 74, 240],
-  bars: [22, 15, 35],
+  backgroundTop: [27, 59, 44],
+  backgroundBottom: [13, 32, 24],
+  glow: [76, 128, 97],
+  coinTop: [247, 243, 231],
+  coinBottom: [209, 226, 212],
+  bars: [27, 59, 44],
 }
 
 const ICON_RADIUS = 0.322

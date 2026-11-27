@@ -78,13 +78,14 @@ describe('DashboardPage', () => {
     expect(router.currentRoute.value.query.month).toBe('2026-10')
   })
 
-  it('opens the category analytics page with the selected month', async () => {
+  it('opens the expense analytics page with the selected month', async () => {
     const { wrapper, router } = await mountPage()
 
     await openHeaderLink(wrapper, 'Аналитика')
 
-    expect(router.currentRoute.value.name).toBe('category-analytics')
+    expect(router.currentRoute.value.name).toBe('expense-analytics')
     expect(router.currentRoute.value.query.month).toBe('2026-10')
+    expect(router.currentRoute.value.query.expensePeriod).toBe('month')
   })
 
   it('shows a clear error when the server is unreachable', async () => {

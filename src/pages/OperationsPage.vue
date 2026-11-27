@@ -1,20 +1,72 @@
 <template>
   <section class="operations-page" :aria-busy="isDeleting">
-    <header class="operations-page__header">
-      <button class="back-button" type="button" @click="goHome">Назад</button>
-      <div>
-        <h3>Операции</h3>
+    <header class="page-head">
+      <div class="page-head__text">
+        <p class="eyebrow">Журнал</p>
+
+        <div class="page-head__title-row">
+          <h1>Операции</h1>
+
+          <div class="month-nav" aria-label="Выбор периода">
+            <button class="month-nav__button" type="button" aria-label="Предыдущий период" @click="shiftScope(-1)">
+              <AppIcon name="chevron-left" :size="18" />
+            </button>
+            <button
+              class="month-nav__button"
+              type="button"
+              aria-label="Следующий период"
+              :disabled="!hasNextScope"
+              @click="shiftScope(1)"
+            >
+              <AppIcon name="chevron-right" :size="18" />
+            </button>
+          </div>
+        </div>
+
+        <p class="page-lead">
+          {{ scopeTitle }} · {{ headline }}
+        </p>
+      </div>
+
+      <div class="page-head__actions">
+        <button class="button button--primary" type="button" @click="openAddPage">
+          <AppIcon name="plus" :size="18" />
+          <span>Добавить</span>
+        </button>
       </div>
     </header>
 
-    <PeriodSwitch
-      :model-value="operationsPeriod"
-      :operation-type="operationType"
-      @update:model-value="setOperationsPeriod"
-      @update:operation-type="setOperationType"
-    />
+    <div class="ledger-top">
+      <label class="search-field">
+        <AppIcon name="search" :size="18" />
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Категория, подкатегория или заметка"
+          aria-label="Поиск операций"
+        />
+        <button
+          v-if="searchQuery"
+          class="search-field__clear"
+          type="button"
+          aria-label="Очистить поиск"
+          @click="searchQuery = ''"
+        >
+          <AppIcon name="close" :size="14" />
+        </button>
+      </label>
 
-    <p v-if="operationGroups.length === 0" class="empty-state">Операций пока нет.</p>
+      <PeriodSwitch
+        :model-value="operationsPeriod"
+        :operation-type="operationType"
+        @update:model-value="setOperationsPeriod"
+        @update:operation-type="setOperationType"
+      />
+    </div>
+
+    <p v-if="operationGroups.length === 0" class="empty-state empty-state--card">
+      {{ emptyStateText }}
+    </p>
 
     <section v-else class="operations-groups">
       <OperationPeriodGroup
@@ -23,6 +75,7 @@
         :currency-symbol="store.currencySymbol"
         :get-category-name="store.getCategoryName"
         :get-subcategory="store.getSubcategory"
+        :get-category-icon="getCategoryIcon"
         :group="group"
         :period="operationsPeriod"
         @edit="openEditPage"
@@ -49,13 +102,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '@/components/AppIcon.vue'
 import OperationPeriodGroup from '@/components/OperationPeriodGroup.vue'
 import PeriodSwitch from '@/components/PeriodSwitch.vue'
 import { useLoadMore } from '@/composables/useLoadMore'
 import { useFinanceStore } from '@/stores/finance'
 import type { Operation, OperationTypeFilter, OperationsPeriod } from '@/types'
-import { getMonthKey } from '@/utils/date'
+import { getMonthKey, isValidDate, parseMonthKey, shiftMonthKey } from '@/utils/date'
 import { waitForMinimumDuration } from '@/utils/delay'
+import { formatMonthTitle, formatOperationsCount } from '@/utils/formatters'
 import { buildOperationPeriodGroups, sortOperationsByDateDesc } from '@/utils/operations'
 import { readMonthQuery, readOperationsPeriod, readOperationType } from '@/utils/routeQuery'
 
@@ -69,14 +124,60 @@ const operationGroupPageSizes: Record<OperationsPeriod, number> = {
   year: 12,
 }
 const isDeleting = ref(false)
+const searchQuery = ref('')
 
 const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const operationsPeriod = computed<OperationsPeriod>(() => readOperationsPeriod(route.query.period))
 const operationType = computed<OperationTypeFilter>(() => readOperationType(route.query.type))
-const sortedOperations = computed(() => sortOperationsByDateDesc(store.activeOperations))
-const filteredOperations = computed(() =>
-  sortedOperations.value.filter(operation => operation.type === getOperationNumericType(operationType.value)),
+const isYearlyScope = computed(() => operationsPeriod.value === 'year')
+const selectedYear = computed(() => parseMonthKey(selectedMonthKey.value).year)
+const currentYear = computed(() => parseMonthKey(store.currentMonthKey).year)
+const hasNextScope = computed(() =>
+  isYearlyScope.value
+    ? selectedYear.value < currentYear.value
+    : selectedMonthKey.value < store.currentMonthKey,
 )
+const scopeTitle = computed(() =>
+  isYearlyScope.value ? String(selectedYear.value) : formatMonthTitle(selectedMonthKey.value),
+)
+const sortedOperations = computed(() => sortOperationsByDateDesc(store.activeOperations))
+const scopedOperations = computed(() =>
+  sortedOperations.value.filter(operation => {
+    const date = new Date(operation.date)
+
+    if (!isValidDate(date)) {
+      return false
+    }
+
+    return isYearlyScope.value
+      ? date.getFullYear() === selectedYear.value
+      : getMonthKey(date) === selectedMonthKey.value
+  }),
+)
+const filteredOperations = computed(() => {
+  const numericType = getOperationNumericType(operationType.value)
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return scopedOperations.value.filter(operation => {
+    if (operation.type !== numericType) {
+      return false
+    }
+
+    if (!query) {
+      return true
+    }
+
+    const subcategory = operation.subcategoryID
+      ? store.getSubcategory(operation.subcategoryID)?.name ?? ''
+      : ''
+
+    return [
+      store.getCategoryName(operation.categoryID),
+      subcategory,
+      operation.note ?? '',
+    ].some(value => value.toLowerCase().includes(query))
+  })
+})
 const operationGroups = computed(() =>
   buildOperationPeriodGroups(filteredOperations.value, operationsPeriod.value, {
     getCategoryName: store.getCategoryName,
@@ -92,15 +193,43 @@ const {
   reset: resetOperationGroupsPagination,
 } = useLoadMore(() => operationGroups.value, () => operationGroupsPageSize.value)
 
-watch([operationsPeriod, operationType, selectedMonthKey], resetOperationGroupsPagination, {
+const headline = computed(() => {
+  if (filteredOperations.value.length === 0) {
+    return 'нет записей'
+  }
+
+  const typeLabel = operationType.value === 'income' ? 'доходов' : 'расходов'
+
+  return `${formatOperationsCount(filteredOperations.value.length)} ${typeLabel}`
+})
+const emptyStateText = computed(() => {
+  if (searchQuery.value.trim()) {
+    return 'По этому запросу ничего не нашлось. Попробуйте другую категорию или очистите поиск.'
+  }
+
+  return operationType.value === 'income'
+    ? 'Доходов за этот период нет. Добавьте первую запись.'
+    : 'Расходов за этот период нет. Добавьте первую запись.'
+})
+
+watch([operationsPeriod, operationType, selectedMonthKey, searchQuery], resetOperationGroupsPagination, {
   immediate: true,
 })
 
-function goHome() {
+function shiftScope(direction: number) {
+  if (direction > 0 && !hasNextScope.value) {
+    return
+  }
+
+  const step = isYearlyScope.value ? 12 : 1
+  const month = shiftMonthKey(selectedMonthKey.value, direction * step)
+
   router.push({
-    name: 'dashboard',
+    name: 'operations',
     query: {
-      month: selectedMonthKey.value,
+      month,
+      period: operationsPeriod.value,
+      type: operationType.value,
     },
   })
 }
@@ -123,6 +252,18 @@ function setOperationType(type: OperationTypeFilter) {
       month: selectedMonthKey.value,
       period: operationsPeriod.value,
       type,
+    },
+  })
+}
+
+function openAddPage() {
+  router.push({
+    name: 'operation-add',
+    query: {
+      month: selectedMonthKey.value,
+      from: 'operations',
+      period: operationsPeriod.value,
+      type: operationType.value,
     },
   })
 }
@@ -160,5 +301,9 @@ async function removeOperation(operation: Operation) {
 
 function getOperationNumericType(type: OperationTypeFilter) {
   return type === 'income' ? 0 : 1
+}
+
+function getCategoryIcon(categoryId: string | null) {
+  return store.getCategory(categoryId)?.icon
 }
 </script>

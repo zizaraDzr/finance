@@ -1,5 +1,9 @@
 # finance
 
+Приложение для учёта личного бюджета: Vue 3, PWA, офлайн-хранилище в IndexedDB и локальная синхронизация.
+
+Актуальный редизайн интерфейса и его обоснование — в [DESIGN.md](DESIGN.md).
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup

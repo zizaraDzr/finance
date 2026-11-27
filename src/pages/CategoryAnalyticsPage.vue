@@ -1,56 +1,72 @@
 <template>
   <section class="analytics-page">
-    <header class="analytics-page__header">
-      <button class="back-button" type="button" @click="goHome">Назад</button>
+    <header class="page-head">
+      <div class="page-head__text">
+        <p class="eyebrow">Аналитика</p>
+        <h1>По категориям</h1>
 
-      <div>
-        <h3>Аналитика</h3>
+        <nav class="analytics-tabs" aria-label="Вид аналитики">
+          <button class="analytics-tabs__item" type="button" @click="openExpenseAnalytics">Расходы</button>
+          <button class="analytics-tabs__item analytics-tabs__item--active" type="button">По категориям</button>
+        </nav>
       </div>
-    </header>
 
-    <div v-if="categoryOptions.length === 0" class="panel">
-      <p class="empty-state">Категорий с расходами пока нет.</p>
-    </div>
-
-    <template v-else>
-      <fieldset class="period-switch category-analytics__picker">
-        <legend>Категория</legend>
-        <button
-          v-for="option in categoryOptions"
-          :key="option.key"
-          type="button"
-          :aria-pressed="option.key === selectedCategoryKey"
-          :class="{ 'period-switch__button--active': option.key === selectedCategoryKey }"
-          @click="selectCategory(option.key)"
-        >
-          {{ option.name }}
-        </button>
-      </fieldset>
-
-      <section class="operations-toolbar analytics-toolbar">
-        <fieldset class="period-switch category-analytics__granularity">
-          <legend>Группировка</legend>
+      <div class="page-head__actions">
+        <fieldset class="segmented category-analytics__granularity">
+          <legend class="visually-hidden">Группировка</legend>
           <button
             v-for="option in granularityOptions"
             :key="option.value"
+            class="segmented__button"
+            :class="{ 'segmented__button--active': option.value === granularity }"
             type="button"
             :aria-pressed="option.value === granularity"
-            :class="{ 'period-switch__button--active': option.value === granularity }"
             @click="selectGranularity(option.value)"
           >
             {{ option.label }}
           </button>
         </fieldset>
+      </div>
+    </header>
+
+    <div v-if="categoryOptions.length === 0" class="card">
+      <p class="empty-state">Категорий с расходами пока нет.</p>
+    </div>
+
+    <template v-else>
+      <section class="card category-selector">
+        <header class="card__head">
+          <div>
+            <p class="eyebrow">Категория</p>
+            <h2>Что анализируем</h2>
+          </div>
+          <span class="card__hint">{{ formatOperationsCount(expenseOperations.length) }}</span>
+        </header>
+
+        <div class="category-analytics__picker" role="group" aria-label="Категория">
+          <button
+            v-for="option in categoryOptions"
+            :key="option.key"
+            class="chip"
+            :class="{ 'period-switch__button--active': option.key === selectedCategoryKey }"
+            type="button"
+            :aria-pressed="option.key === selectedCategoryKey"
+            @click="selectCategory(option.key)"
+          >
+            {{ option.name }}
+          </button>
+        </div>
       </section>
 
-      <article class="panel analytics-summary">
-        <div class="panel__header">
+      <article class="card analytics-summary">
+        <header class="card__head">
           <div>
+            <p class="eyebrow">Категория</p>
             <h2>{{ selectedCategoryName }}</h2>
             <span>Расход за всё время</span>
           </div>
           <strong class="amount--expense">{{ formatMoney(summary.total, store.currencySymbol) }}</strong>
-        </div>
+        </header>
 
         <div class="analytics-summary__stats">
           <div class="analytics-summary__stat">
@@ -72,13 +88,14 @@
         </div>
       </article>
 
-      <article v-if="hasSubcategories" class="panel analytics-panel category-analytics__breakdown">
-        <div class="panel__header">
+      <article v-if="hasSubcategories" class="card analytics-panel category-analytics__breakdown">
+        <header class="card__head">
           <div>
+            <p class="eyebrow">Детализация</p>
             <h2>Подкатегории</h2>
             <span>{{ formatSubcategoryCount(subcategoryRows.length) }}</span>
           </div>
-        </div>
+        </header>
 
         <div class="expense-breakdown">
           <section
@@ -87,7 +104,7 @@
             class="expense-breakdown__group category-analytics__subcategory"
           >
             <div class="expense-breakdown__row">
-              <div>
+              <div class="breakdown-title">
                 <strong>{{ row.name }}</strong>
                 <span>{{ lastBucketTitle }}: {{ formatMoney(row.amount, store.currencySymbol) }}</span>
               </div>
@@ -106,8 +123,13 @@
               class="category-analytics__change analytics-change"
               :class="getChangeClass(row.percentChange)"
             >
-              {{ formatChangeHint(row.change, row.percentChange, store.currencySymbol) }}
-              {{ previousHint }}
+              <template v-if="row.percentChange === null && row.change === 0">
+                Нет данных для сравнения
+              </template>
+              <template v-else>
+                {{ formatChangeHint(row.change, row.percentChange, store.currencySymbol) }}
+                {{ previousHint }}
+              </template>
             </p>
           </section>
         </div>
@@ -128,6 +150,7 @@ import {
   formatChangeHint,
   formatMoney,
   formatMonthTitle,
+  formatOperationsCount,
   formatPercent,
   formatSubcategoryCount,
 } from '@/utils/formatters'
@@ -246,18 +269,21 @@ function navigate(changes: { category?: string; granularity?: AnalyticsGranulari
   })
 }
 
-function goHome() {
-  router.push({
-    name: 'dashboard',
-    query: returnMonth.value ? { month: returnMonth.value } : {},
-  })
-}
-
 function selectCategory(categoryKey: string) {
   navigate({ category: categoryKey })
 }
 
 function selectGranularity(value: AnalyticsGranularity) {
   navigate({ granularity: value })
+}
+
+function openExpenseAnalytics() {
+  router.push({
+    name: 'expense-analytics',
+    query: {
+      ...(returnMonth.value ? { month: returnMonth.value } : {}),
+      expensePeriod: 'month',
+    },
+  })
 }
 </script>

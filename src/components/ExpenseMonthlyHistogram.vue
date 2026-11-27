@@ -1,12 +1,13 @@
 <template>
-  <article class="panel analytics-panel monthly-histogram">
-    <div class="panel__header">
+  <article class="card chart-card monthly-histogram">
+    <header class="card__head">
       <div>
-        <h2>Расходы по месяцам</h2>
+        <p class="eyebrow">По месяцам</p>
+        <h2>Расходы за год</h2>
         <span>Среднее {{ formatMoney(averageExpense, store.currencySymbol) }}</span>
       </div>
       <strong class="amount--expense">{{ formatMoney(maxExpense, store.currencySymbol) }}</strong>
-    </div>
+    </header>
 
     <p v-if="totalExpense === 0" class="empty-state">За этот год расходов пока нет.</p>
 

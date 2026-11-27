@@ -1,76 +1,111 @@
 <template>
   <section class="analytics-page">
-    <header class="analytics-page__header">
-      <button class="back-button" type="button" @click="goHome">Назад</button>
+    <header class="page-head">
+      <div class="page-head__text">
+        <p class="eyebrow">Аналитика</p>
 
-      <div class="analytics-month">
-        <button class="month-nav-button" type="button" :aria-label="previousPeriodLabel" @click="selectPreviousMonth">
-          <span class="accordion-chevron__nav">‹</span>
-        </button>
+        <div class="page-head__title-row">
+          <h1>{{ selectedPeriodTitle }}</h1>
 
-        <div>
-          <h3>{{ selectedPeriodTitle }}</h3>
+          <div class="month-nav" aria-label="Выбор периода">
+            <button class="month-nav__button" type="button" :aria-label="previousPeriodLabel" @click="selectPreviousMonth">
+              <AppIcon name="chevron-left" :size="18" />
+            </button>
+            <button
+              v-if="hasNextPeriod"
+              class="month-nav__button"
+              type="button"
+              :aria-label="nextPeriodLabel"
+              @click="selectNextMonth"
+            >
+              <AppIcon name="chevron-right" :size="18" />
+            </button>
+          </div>
         </div>
 
-        <button v-if="hasNextPeriod" class="month-nav-button" type="button" :aria-label="nextPeriodLabel"
-          @click="selectNextMonth">
-          <span class="accordion-chevron__nav">›</span>
-        </button>
+        <nav class="analytics-tabs" aria-label="Вид аналитики">
+          <button class="analytics-tabs__item analytics-tabs__item--active" type="button">Расходы</button>
+          <button class="analytics-tabs__item" type="button" @click="openCategoryAnalytics">По категориям</button>
+        </nav>
+      </div>
+
+      <div class="page-head__actions">
+        <div class="segmented" role="group" aria-label="Период аналитики">
+          <button
+            v-for="option in analyticsPeriodOptions"
+            :key="option.value"
+            class="segmented__button"
+            :class="{ 'segmented__button--active': analyticsPeriod === option.value }"
+            type="button"
+            :aria-pressed="analyticsPeriod === option.value"
+            @click="setAnalyticsPeriod(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
       </div>
     </header>
 
-    <section class="operations-toolbar analytics-toolbar" aria-label="Период аналитики">
-      <div class="operations-total operations-total--negative">
-        <span>{{ analyticsPeriodLabel }}</span>
+    <section class="analytics-hero" aria-label="Сводка расходов">
+      <div class="analytics-hero__main">
+        <p class="eyebrow">{{ analyticsPeriodLabel }}</p>
         <!-- key заставляет iOS Safari перерисовать текст после смены периода/суммы -->
         <strong :key="`${analyticsPeriod}-${selectedMonthKey}-${totalExpense}`">
           {{ formatMoney(totalExpense, store.currencySymbol) }}
         </strong>
+        <span>{{ formatOperationsCount(expenseOperations.length) }}</span>
       </div>
 
-      <fieldset class="period-switch analytics-period-switch">
-        <legend>Период</legend>
-        <button v-for="option in analyticsPeriodOptions" :key="option.value" type="button"
-          :class="{ 'period-switch__button--active': analyticsPeriod === option.value }"
-          @click="setAnalyticsPeriod(option.value)">
-          {{ option.label }}
-        </button>
-      </fieldset>
+      <div class="analytics-hero__aside">
+        <div class="analytics-hero__stat">
+          <span>В среднем в {{ analyticsPeriod === 'year' ? 'месяц' : 'день' }}</span>
+          <strong>{{ formatMoney(averageExpense, store.currencySymbol) }}</strong>
+        </div>
+        <div class="analytics-hero__stat">
+          <span>Самая крупная категория</span>
+          <strong>{{ topCategoryName }}</strong>
+        </div>
+      </div>
     </section>
 
     <section class="analytics-grid">
-      <article class="panel analytics-panel">
-        <div class="panel__header">
+      <article class="card analytics-panel">
+        <header class="card__head">
           <div>
-            <h2>Назначение</h2>
+            <p class="eyebrow">Структура</p>
+            <h2>Расходы по категориям</h2>
             <span>{{ formatOperationsCount(expenseOperations.length) }}</span>
           </div>
           <strong class="amount--expense">{{ formatMoney(totalExpense, store.currencySymbol) }}</strong>
-        </div>
+        </header>
 
         <p v-if="expenseGroups.length === 0" class="empty-state">За этот период расходов пока нет.</p>
 
         <div v-else class="expense-breakdown">
           <section v-for="category in visibleExpenseGroups" :key="category.key" class="expense-breakdown__group">
-            <div class="expense-breakdown__row">
-              <div class="breakdown-title">
-                <button class="accordion-toggle" type="button"
-                  :class="{ 'accordion-toggle--open': isCategoryOpen(category.key) }"
-                  :aria-label="`Показать ${category.name}`" @click="toggleCategory(category.key)">
-                  <span class="accordion-chevron">›</span>
-                </button>
+            <button
+              class="expense-breakdown__toggle"
+              type="button"
+              :aria-label="`Показать ${category.name}`"
+              :aria-expanded="isCategoryOpen(category.key)"
+              @click="toggleCategory(category.key)"
+            >
+              <span class="breakdown-icon" aria-hidden="true">{{ store.getCategory(category.key)?.icon || '•' }}</span>
 
-                <div>
-                  <strong>{{ category.name }}</strong>
-                  <span>{{ formatOperationsCount(category.count) }}</span>
-                </div>
-              </div>
+              <span class="breakdown-title">
+                <strong>{{ category.name }}</strong>
+                <span>{{ formatOperationsCount(category.count) }}</span>
+              </span>
 
-              <div class="expense-breakdown__amount">
+              <span class="expense-breakdown__amount">
                 <b>{{ formatMoney(category.amount, store.currencySymbol) }}</b>
                 <span>{{ formatPercent(category.percent) }}</span>
-              </div>
-            </div>
+              </span>
+
+              <span class="accordion-chevron" :class="{ 'accordion-chevron--open': isCategoryOpen(category.key) }" aria-hidden="true">
+                ›
+              </span>
+            </button>
 
             <div class="expense-share" aria-hidden="true">
               <span :style="{ width: `${category.percent}%` }"></span>
@@ -84,7 +119,10 @@
                   :aria-expanded="isSubcategoryOpen(category.key, subcategory.key)"
                   :aria-label="`${isSubcategoryOpen(category.key, subcategory.key) ? 'Скрыть' : 'Показать'} операции: ${subcategory.name}`"
                   @click="toggleSubcategory(category.key, subcategory.key)">
-                  <span class="accordion-chevron">›</span>
+                  <span class="accordion-chevron accordion-chevron--small"
+                    :class="{ 'accordion-chevron--open': isSubcategoryOpen(category.key, subcategory.key) }" aria-hidden="true">
+                    ›
+                  </span>
 
                   <span class="expense-subcategories__info">
                     <strong>{{ subcategory.name }}</strong>
@@ -107,6 +145,7 @@
                     v-for="operation in subcategory.operations"
                     :key="operation.id"
                     :operation="operation"
+                    :icon="store.getCategory(operation.categoryID)?.icon"
                     :title="formatOperationDateTime(operation.date)"
                     :subtitle="operation.note || undefined"
                     :time-label="store.getCategoryName(operation.categoryID)"
@@ -136,6 +175,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '@/components/AppIcon.vue'
 import ExpenseMonthlyHistogram from '@/components/ExpenseMonthlyHistogram.vue'
 import ExpenseTrendChart from '@/components/ExpenseTrendChart.vue'
 import OperationListItem from '@/components/OperationListItem.vue'
@@ -175,7 +215,7 @@ const route = useRoute()
 const router = useRouter()
 const openedCategories = ref(new Set<string>())
 const openedSubcategories = ref(new Set<string>())
-const expenseGroupsPreviewCount = 3
+const expenseGroupsPreviewCount = 5
 
 const analyticsPeriodOptions: Array<{ value: ExpensePeriod; label: string }> = [
   { value: 'month', label: 'Месяц' },
@@ -242,7 +282,21 @@ const expenseOperations = computed(() =>
   }),
 )
 const totalExpense = computed(() => expenseOperations.value.reduce((sum, operation) => sum + operation.sum, 0))
+const averageExpense = computed(() => {
+  if (analyticsPeriod.value === 'year') {
+    const months = selectedYear.value === currentYear.value ? currentMonthNumber.value : 12
+    return months > 0 ? totalExpense.value / months : 0
+  }
+
+  // Average per calendar day that has already passed in the selected month.
+  const days = selectedMonthKey.value === store.currentMonthKey
+    ? new Date().getDate()
+    : new Date(selectedYear.value, selectedMonthNumber.value, 0).getDate()
+
+  return days > 0 ? totalExpense.value / days : 0
+})
 const expenseGroups = computed(() => buildExpenseGroups(expenseOperations.value, totalExpense.value))
+const topCategoryName = computed(() => expenseGroups.value[0]?.name ?? '—')
 const {
   visibleItems: visibleExpenseGroups,
   hiddenCount: hiddenExpenseGroupsCount,
@@ -255,15 +309,6 @@ watch([selectedMonthKey, analyticsPeriod], () => {
   openedSubcategories.value = new Set()
   resetExpenseGroupsVisibility()
 })
-
-function goHome() {
-  router.push({
-    name: 'dashboard',
-    query: {
-      month: store.currentMonthKey,
-    },
-  })
-}
 
 function selectPreviousMonth() {
   setSelectedMonth(previousPeriodKey.value)
@@ -299,6 +344,16 @@ function setAnalyticsPeriod(period: ExpensePeriod) {
     query: {
       month: selectedMonthKey.value,
       expensePeriod: period,
+    },
+  })
+}
+
+function openCategoryAnalytics() {
+  router.push({
+    name: 'category-analytics',
+    query: {
+      month: selectedMonthKey.value,
+      granularity: analyticsPeriod.value === 'year' ? 'year' : 'month',
     },
   })
 }
@@ -354,5 +409,4 @@ function buildExpenseGroups(operations: Operation[], total: number): ExpenseCate
 function getSharePercent(amount: number, total: number) {
   return total > 0 ? (amount / total) * 100 : 0
 }
-
 </script>
