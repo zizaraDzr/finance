@@ -73,4 +73,17 @@ describe('OperationFormPage', () => {
     expect(wrapper.find('.page-loader').exists()).toBe(false)
     expect(router.currentRoute.value.name).toBe('dashboard')
   })
+
+  it('disables the sticky save action until the amount and the category are set', async () => {
+    const { wrapper } = await mountForm()
+    const mobileSubmit = wrapper.find('.mobile-submit-bar button[type="submit"]')
+
+    expect(mobileSubmit.exists()).toBe(true)
+    expect(mobileSubmit.attributes('disabled')).toBeDefined()
+
+    await wrapper.find('input[type="number"]').setValue(250)
+    await wrapper.find('.category-select').trigger('click')
+
+    expect(mobileSubmit.attributes('disabled')).toBeUndefined()
+  })
 })

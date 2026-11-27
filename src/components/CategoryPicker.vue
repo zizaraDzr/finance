@@ -12,7 +12,7 @@
       </span>
     </header>
 
-    <div class="category-list">
+    <div class="category-list" :class="{ 'category-list--expanded': isExpanded }">
       <article
         v-for="group in groups"
         :key="group.id"
@@ -55,11 +55,21 @@
         </template>
       </article>
     </div>
+
+    <button
+      v-if="hasMoreGroups"
+      class="category-list-toggle"
+      type="button"
+      :aria-expanded="isExpanded"
+      @click="isExpanded = !isExpanded"
+    >
+      {{ isExpanded ? 'Свернуть категории' : `Показать все категории (${groups.length})` }}
+    </button>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 import type { CategoryOption, CategoryPickerGroup } from '@/types'
 
@@ -74,10 +84,37 @@ const emit = defineEmits<{
   select: [option: CategoryOption]
 }>()
 
+// On phones only the six most relevant groups are shown at once; the rest are
+// one tap away. Any selection outside that window expands the list by itself.
+const visibleGroupCount = 6
+const isExpanded = ref(false)
+
 const categoryOptions = computed(() =>
   props.groups.flatMap(group => (group.subcategories.length ? group.subcategories : [group.option])),
 )
 const selectedCategory = computed(() => categoryOptions.value.find(option => option.value === props.modelValue))
+const hasMoreGroups = computed(() => props.groups.length > visibleGroupCount)
+const selectedGroupIndex = computed(() => {
+  if (!selectedCategory.value) {
+    return -1
+  }
+
+  return props.groups.findIndex(
+    group =>
+      group.option.value === selectedCategory.value?.value ||
+      group.subcategories.some(option => option.value === selectedCategory.value?.value),
+  )
+})
+
+watch(
+  selectedGroupIndex,
+  index => {
+    if (index >= visibleGroupCount) {
+      isExpanded.value = true
+    }
+  },
+  { immediate: true },
+)
 
 function isGroupSelected(groupId: string) {
   const group = props.groups.find(item => item.id === groupId)
@@ -95,5 +132,8 @@ function isGroupSelected(groupId: string) {
 function selectCategory(option: CategoryOption) {
   emit('update:modelValue', option.value)
   emit('select', option)
+  // Collapse back to the short list after a choice so the date and note fields
+  // stay close on a phone; the summary shows what was selected.
+  isExpanded.value = false
 }
 </script>

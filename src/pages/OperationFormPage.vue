@@ -13,7 +13,7 @@
     </header>
 
     <div class="form-layout">
-      <form class="operation-form card" @submit.prevent="submitOperation">
+      <form id="operation-form" class="operation-form card" @submit.prevent="submitOperation">
         <label class="amount-field">
           <span class="field-label">Сумма</span>
           <span class="amount-field__control">
@@ -122,6 +122,25 @@
       </aside>
     </div>
 
+    <div class="mobile-submit-bar">
+      <div class="mobile-submit-bar__summary">
+        <span>{{ form.type === 1 ? 'Расход' : 'Доход' }}</span>
+        <strong>{{ formatMoney(form.sum || 0, store.currencySymbol) }}</strong>
+        <small :class="{ 'mobile-submit-bar__hint': mobileHintIsMissing }">
+          {{ mobileHint }}
+        </small>
+      </div>
+
+      <button
+        class="button button--primary submit-button"
+        type="submit"
+        form="operation-form"
+        :disabled="isSubmitting || !canSubmit"
+      >
+        {{ isEditPage ? 'Сохранить' : 'Добавить' }}
+      </button>
+    </div>
+
     <div v-if="isSubmitting" class="page-loader" role="status" aria-live="polite">
       <span class="page-loader__spinner" aria-hidden="true"></span>
       <p>{{ isEditPage ? 'Сохраняем изменения…' : 'Сохраняем запись…' }}</p>
@@ -171,6 +190,19 @@ const categoryOptions = computed(() =>
 const selectedCategory = computed(() =>
   categoryOptions.value.find(option => option.value === form.value.categoryValue),
 )
+const canSubmit = computed(
+  () => Boolean(form.value.sum && form.value.sum > 0 && selectedCategory.value),
+)
+const mobileHintIsMissing = computed(
+  () => !form.value.sum || form.value.sum <= 0 || !selectedCategory.value,
+)
+const mobileHint = computed(() => {
+  if (!form.value.sum || form.value.sum <= 0) {
+    return 'Укажите сумму'
+  }
+
+  return selectedCategory.value?.name || 'Выберите категорию'
+})
 const selectedMonthKey = computed(() => readMonthQuery(route.query.month, store.currentMonthKey))
 const formattedDate = computed(() => {
   const [year, month, day] = form.value.date.split('-').map(Number)

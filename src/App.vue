@@ -60,9 +60,12 @@
           <span class="brand__text"><strong>Бюджет</strong></span>
         </RouterLink>
 
-        <button class="icon-button" type="button" :aria-label="themeLabel" @click="toggleTheme">
-          <AppIcon :name="theme === 'dark' ? 'moon' : 'sun'" :size="19" />
-        </button>
+        <div class="shell-topbar__actions">
+          <AppVersion />
+          <button class="icon-button" type="button" :aria-label="themeLabel" @click="toggleTheme">
+            <AppIcon :name="theme === 'dark' ? 'moon' : 'sun'" :size="19" />
+          </button>
+        </div>
       </header>
 
       <main id="main" class="app-shell">
