@@ -81,6 +81,15 @@
           >
             {{ month.sumText }}
           </text>
+          <text
+            v-if="month.amount > 0"
+            class="histogram-chart__sum-compact"
+            :x="month.compactPlacement.x"
+            :y="month.compactPlacement.y"
+            text-anchor="middle"
+          >
+            {{ month.compactText }}
+          </text>
         </g>
       </svg>
     </div>
@@ -92,7 +101,7 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { isValidDate, parseMonthKey } from '@/utils/date'
 import type { ChartArea, ChartHintPlacement } from '@/utils/chart'
-import { fitHintInArea } from '@/utils/chart'
+import { estimateHintWidth, fitHintInArea } from '@/utils/chart'
 import { formatMoney, formatMonthTitle } from '@/utils/formatters'
 
 type MonthlyExpense = {
@@ -105,6 +114,8 @@ type MonthlyExpense = {
 type ChartMonth = MonthlyExpense & {
   sumText: string
   sumPlacement: ChartHintPlacement
+  compactText: string
+  compactPlacement: ChartHintPlacement
 }
 
 const props = defineProps<{
@@ -125,6 +136,8 @@ const chartPlotBottom = 42
 // Размеры шрифтов подсказок в пользовательских единицах SVG (0.9rem и 0.6rem от 16px).
 const hintFontSize = 14.4
 const sumLabelFontSize = 9.6
+const compactLabelFontSize = 16.8
+const compactLabelGap = 18
 const monthLabels = [
   'Янв',
   'Фев',
@@ -203,6 +216,8 @@ const labelArea = computed<ChartArea>(() => ({
 const chartMonths = computed<ChartMonth[]>(() =>
   monthlyExpenses.value.map((month) => {
     const sumText = formatMoney(month.amount, store.currencySymbol)
+    const compactText = formatCompactMoney(month.amount)
+    const compactHalfWidth = estimateHintWidth(compactText, compactLabelFontSize) / 2
 
     return {
       ...month,
@@ -215,6 +230,19 @@ const chartMonths = computed<ChartMonth[]>(() =>
         fontSize: sumLabelFontSize,
         area: labelArea.value,
       }),
+      compactText,
+      compactPlacement: {
+        anchor: 'middle',
+        x: clamp(
+          getBarCenterX(month.index),
+          chartPlotLeft + compactHalfWidth,
+          chartWidth - chartPlotRight - compactHalfWidth,
+        ),
+        y: Math.max(
+          compactLabelFontSize,
+          getBarY(month.amount) - 8 - (month.index % 2) * compactLabelGap,
+        ),
+      },
     }
   }),
 )
@@ -268,5 +296,24 @@ function getBarY(amount: number) {
 
 function getBarHeight(amount: number) {
   return Math.max(chartHeight - chartPlotBottom - getBarY(amount), amount > 0 ? 4 : 0)
+}
+
+// The phone chart has room for four or five characters per column, so it shows
+// rounded thousands and millions instead of the full currency string.
+function formatCompactMoney(value: number) {
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000
+    return `${millions >= 10 ? Math.round(millions) : millions.toFixed(1).replace('.', ',')}м`
+  }
+
+  if (value >= 1_000) {
+    return `${Math.round(value / 1_000)}к`
+  }
+
+  return String(Math.round(value))
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
 }
 </script>

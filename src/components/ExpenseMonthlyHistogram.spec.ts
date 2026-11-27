@@ -81,6 +81,17 @@ describe('ExpenseMonthlyHistogram', () => {
     expect(wrapper.find('.histogram-chart__max-label').exists()).toBe(false)
   })
 
+  it('prepares short sums for the narrow chart', () => {
+    const { wrapper } = mountHistogram(2026, {
+      Operation: [createYearExpense(2026, 4, 300), createYearExpense(2026, 11, 12_000)],
+    })
+
+    const sums = wrapper.findAll('.histogram-chart__sum-compact')
+    expect(sums).toHaveLength(2)
+    expect(sums[0]?.text()).toBe('300')
+    expect(sums[1]?.text()).toBe('12к')
+  })
+
   it('keeps the sums of the first and the last month inside the plot area', () => {
     const huge = 999999999
     const { wrapper } = mountHistogram(2026, {
